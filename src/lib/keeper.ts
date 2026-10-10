@@ -165,6 +165,7 @@ function syncAwareness() {
   const p = passageOf(s, w.passageId);
   const prog = progress(w);
   const frac = p && p.nm ? Math.min(1, (w.startNm + prog.sailedNm) / p.nm) : prog.fraction;
+  const minutesLeft = Math.ceil(prog.remainingMs / 60000);
   platform.setProgress(frac);
-  platform.setTray(Math.ceil(prog.remainingMs / 60000), `${clock(prog.remainingMs)} to ${w.toLabel}`);
+  platform.setTray(minutesLeft, platform.desktop ? `Leeward · ${minutesLeft} min to ${w.toLabel}` : `${clock(prog.remainingMs)} to ${w.toLabel}`);
 }

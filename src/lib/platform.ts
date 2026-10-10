@@ -150,6 +150,7 @@ function desktopPlatform(): Platform {
   const call = <T,>(cmd: string, args?: Record<string, unknown>) => core.then((c) => c.invoke<T>(cmd, args));
   const swallow = (p: Promise<unknown>) => p.catch((e) => console.warn(e));
   let lastTrayKey = '';
+  let lastProgress: number | null | undefined;
 
   return {
     desktop: true,
@@ -158,12 +159,15 @@ function desktopPlatform(): Platform {
     close: () => void swallow(win.then((w) => w.getCurrentWindow().close())),
     focusMain: (route) => void swallow(call('focus_main', { route: route ?? null })),
     setProgress(fraction) {
+      const pct = fraction == null ? null : Math.round(fraction * 100);
+      if (pct === lastProgress) return;
+      lastProgress = pct;
       void swallow(
         win.then((w) =>
           w.getCurrentWindow().setProgressBar(
             fraction == null
               ? { status: w.ProgressBarStatus.None }
-              : { status: w.ProgressBarStatus.Normal, progress: Math.round(fraction * 100) },
+              : { status: w.ProgressBarStatus.Normal, progress: pct ?? 0 },
           ),
         ),
       );

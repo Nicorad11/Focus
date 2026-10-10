@@ -550,9 +550,17 @@ export function Chart({
     for (const p of ports) {
       const key = `${p.kind}:${p.id}`;
       seen.add(key);
-      const sig = `${p.name}|${p.sub ?? ''}|${p.pos.join(',')}|${p.side ?? ''}`;
+      const sig = `${p.pos.join(',')}|${p.side ?? ''}|${p.sub ? 1 : 0}`;
       const existing = markers.current.get(key);
-      if (existing && existing.sig === sig) continue;
+      if (existing && existing.sig === sig) {
+        // same place: just refresh the words (e.g. "24.7 nm to go" ticking down)
+        const el = existing.marker.getElement();
+        const name = el.querySelector('.cm-name');
+        const sub = el.querySelector('.cm-sub');
+        if (name && name.textContent !== p.name) name.textContent = p.name;
+        if (sub && p.sub != null && sub.textContent !== p.sub) sub.textContent = p.sub;
+        continue;
+      }
       existing?.marker.remove();
       const marker = new maplibregl.Marker({ element: markerElement(p, (id) => clickRef.current?.(id)), anchor: 'center' }).setLngLat(p.pos).addTo(map);
       markers.current.set(key, { marker, sig });
