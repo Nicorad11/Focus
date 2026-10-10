@@ -1,0 +1,137 @@
+/* Leeward design tokens, from the "Leeward for Windows" canvas. Night watch redefines them. */
+
+:root {
+  --font-sans: 'Archivo Variable', 'Archivo', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --font-serif: 'Newsreader Variable', 'Newsreader', Georgia, serif;
+
+  /* chrome (title bar, rail, dark consoles) */
+  --chrome: #13233a;
+  --chrome-2: #1c3150;
+  --chrome-text: #e8edf2;
+  --chrome-text-2: #c9d2db;
+  --chrome-text-3: #b9c4cf;
+  --chrome-label: #9fb0c0;
+  --chrome-hover: rgba(255, 255, 255, 0.08);
+  --chrome-active: rgba(255, 255, 255, 0.12);
+  --chrome-line: rgba(255, 255, 255, 0.35);
+
+  /* paper */
+  --bg: #f3f1ea;
+  --panel: #fbfaf7;
+  --field: #ffffff;
+  --selected: #eef1f4;
+  --line: #e2ddd1;
+  --line-soft: #ece8de;
+  --line-panel: #ddd8cc;
+  --line-strong: #d6d0c2;
+  --line-button: #c9c2b2;
+  --line-dashed: #b8b1a1;
+  --line-dashed-strong: #a9a291;
+
+  /* ink */
+  --ink: #13233a;
+  --ink-2: #3e4c59;
+  --ink-3: #4a5866;
+  --muted: #5f6b77;
+  --faint: #7a8590;
+  --disabled: #a7aeb5;
+  --radio: #9aa3ac;
+
+  /* accents */
+  --red: #c93a22;
+  --red-bright: #e0442c;
+  --red-ink: #b0321c;
+  --red-ink-2: #a12e19;
+  --red-tint: #fdf0ec;
+  --red-tint-2: #fbe3dd;
+  --teal: #2e6e78;
+  --teal-ink: #1f5961;
+  --teal-tint: #eaf1f1;
+  --teal-tint-2: #ddebec;
+  --teal-line: #9cc0c4;
+  --ochre: #8a6418;
+  --switch-off: #c9c2b2;
+  --progress-track: #e2ddd1;
+
+  /* chart */
+  --sea: #f3f1ea;
+  --land: #e6dcc2;
+  --coast: #13233a;
+  --coast-band: #d6e3e3;
+  --contour: #86a7ad;
+  --graticule: #bfb9a9;
+  --graticule-label: #9e9786;
+  --label-halo: #f3f1ea;
+  --port-dot: #ffffff;
+
+  --shadow-panel: 0 18px 44px rgba(19, 35, 58, 0.18);
+  --shadow-card: 0 10px 28px rgba(19, 35, 58, 0.14);
+  --shadow-control: 0 6px 18px rgba(19, 35, 58, 0.1);
+  --shadow-console: 0 18px 44px rgba(19, 35, 58, 0.3);
+  --shadow-dialog: 0 30px 70px rgba(10, 20, 34, 0.35);
+  --scrim: rgba(19, 35, 58, 0.38);
+
+  color-scheme: light;
+}
+
+:root[data-theme='night'] {
+  --chrome: #0a1424;
+  --chrome-2: #142640;
+  --chrome-hover: rgba(255, 255, 255, 0.07);
+  --chrome-active: rgba(255, 255, 255, 0.11);
+
+  --bg: #0f1b2c;
+  --panel: #14233a;
+  --field: #0f1d31;
+  --selected: #1d3150;
+  --line: #24364f;
+  --line-soft: #1f2f46;
+  --line-panel: #2a3d58;
+  --line-strong: #31455f;
+  --line-button: #3b506c;
+  --line-dashed: #3d526d;
+  --line-dashed-strong: #4b6180;
+
+  --ink: #e6ebf0;
+  --ink-2: #c5cfd9;
+  --ink-3: #b2bfcb;
+  --muted: #9aa9b8;
+  --faint: #7f8fa0;
+  --disabled: #55657a;
+  --radio: #6b7d92;
+
+  --red: #d4462c;
+  --red-bright: #f0563c;
+  --red-ink: #ff8a70;
+  --red-ink-2: #ff9c85;
+  --red-tint: #3a1f1f;
+  --red-tint-2: #4a2420;
+  --teal: #4a9aa6;
+  --teal-ink: #8fd0d8;
+  --teal-tint: #142f36;
+  --teal-tint-2: #183a42;
+  --teal-line: #3d7882;
+  --ochre: #d7a648;
+  --switch-off: #3b506c;
+  --progress-track: #2a3d58;
+
+  --sea: #0e1a2b;
+  --land: #233041;
+  --coast: #8fa3b8;
+  --coast-band: #16303d;
+  --contour: #2f5a66;
+  --graticule: #26384f;
+  --graticule-label: #5f7389;
+  --label-halo: #0e1a2b;
+  --port-dot: #0e1a2b;
+
+  --shadow-panel: 0 18px 44px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.4);
+  --shadow-control: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-console: 0 18px 44px rgba(0, 0, 0, 0.5);
+  --shadow-dialog: 0 30px 70px rgba(0, 0, 0, 0.55);
+  --scrim: rgba(3, 8, 16, 0.55);
+
+  color-scheme: dark;
+}
