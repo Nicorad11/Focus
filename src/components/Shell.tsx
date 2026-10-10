@@ -50,7 +50,7 @@ export function TitleBar({ status }: { status?: ReactNode }) {
 const ITEMS: { route: Route; label: string; icon: ReactNode }[] = [
   { route: 'chart', label: 'Chart', icon: <ChartIcon /> },
   { route: 'logbook', label: 'Logbook', icon: <LogbookIcon /> },
-  { route: 'ports', label: 'Ports', icon: <AnchorIcon /> },
+  { route: 'ports', label: 'Voyage', icon: <AnchorIcon /> },
   { route: 'batten', label: 'Batten', icon: <ShieldIcon /> },
 ];
 

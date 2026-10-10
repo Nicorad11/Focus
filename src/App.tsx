@@ -14,7 +14,7 @@ import { activeWatch, anchoredPassage, boatPortId, progress } from './lib/voyage
 import { BattenDown } from './screens/BattenDown';
 import { ChartScreen } from './screens/chart/ChartScreen';
 import { Logbook } from './screens/Logbook';
-import { Ports } from './screens/Ports';
+import { Voyage } from './screens/Voyage';
 import { Settings } from './screens/Settings';
 import { Welcome } from './screens/Welcome';
 import { MiniWindow, ShieldWindow, TrayFlyout } from './screens/windows';
@@ -63,7 +63,7 @@ function MainWindow() {
         <main className="main">
           <ChartScreen ports={ports} visible={route === 'chart'} />
           {route === 'logbook' && <Logbook ports={ports} />}
-          {route === 'ports' && <Ports ports={ports} />}
+          {route === 'ports' && <Voyage ports={ports} />}
           {route === 'batten' && <BattenDown />}
           {route === 'settings' && <Settings ports={ports} />}
           {!ports && <div className="chart-loading">Loading harbours…</div>}

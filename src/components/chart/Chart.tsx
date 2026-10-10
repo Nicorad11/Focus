@@ -20,7 +20,8 @@ export interface ChartPort {
 export interface ChartRoute {
   id: string;
   coords: LonLat[];
-  style: 'plan' | 'todo' | 'done' | 'past' | 'today';
+  /** past/today: logbook tracks; wake: earlier passages drawn faintly behind the current plan */
+  style: 'plan' | 'todo' | 'done' | 'past' | 'today' | 'wake';
 }
 
 export interface ChartFit {
@@ -150,6 +151,14 @@ function makeStyle(c: Colors): StyleSpecification {
       { id: 'harbours-small', type: 'circle', source: 'harbours', filter: ['==', ['get', 'size'], 2], minzoom: 6, paint: harbourPaint(3.1) },
       { id: 'harbours-tiny', type: 'circle', source: 'harbours', filter: ['==', ['get', 'size'], 1], minzoom: 7.2, paint: harbourPaint(2.8) },
       {
+        id: 'route-wake',
+        type: 'line',
+        source: 'routes',
+        filter: ['==', ['get', 'style'], 'wake'],
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': c.teal, 'line-width': 1.8, 'line-opacity': 0.55 },
+      },
+      {
         id: 'route-casing',
         type: 'line',
         source: 'routes',
@@ -206,6 +215,7 @@ function applyColors(map: MlMap, c: Colors) {
   }
   set('route-casing', 'line-color', c.halo);
   set('route-past', 'line-color', c.teal);
+  set('route-wake', 'line-color', c.teal);
   set('route-todo', 'line-color', c.red);
   set('route-done', 'line-color', c.red);
 }

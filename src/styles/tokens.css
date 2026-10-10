@@ -54,6 +54,13 @@
   --switch-off: #c9c2b2;
   --progress-track: #e2ddd1;
 
+  /* sequential teal for "how much" (days at sea): empty, then light to dark */
+  --seq-0: #ece8de;
+  --seq-1: #cfe3e4;
+  --seq-2: #93c1c6;
+  --seq-3: #4f949d;
+  --seq-4: #24606a;
+
   /* chart */
   --sea: #f3f1ea;
   --land: #e6dcc2;
@@ -115,6 +122,12 @@
   --ochre: #d7a648;
   --switch-off: #3b506c;
   --progress-track: #2a3d58;
+
+  --seq-0: #1c2c42;
+  --seq-1: #1d4a52;
+  --seq-2: #2c6c76;
+  --seq-3: #4a9aa6;
+  --seq-4: #8fd0d8;
 
   --sea: #0e1a2b;
   --land: #233041;

@@ -2,7 +2,9 @@
 // taskbar, tray, mini window and app blocker in step with the watch, and guards against clock jumps.
 
 import { useEffect, useRef, useState } from 'react';
+import { earnedBy } from './achievements';
 import { ambience } from './audio';
+import { loadPorts } from './ports';
 import { clock } from './format';
 import { platform, type BlockerConfig } from './platform';
 import { navigate, type Route } from './router';
@@ -62,12 +64,19 @@ export function useWatchKeeper(): { idle: IdlePrompt | null; dismissIdle: () => 
       const ended = s.watches.find((x) => x.id === prev);
       if (!ended) return;
       navigate('chart');
-      if (ended.status === 'made_port') {
+      if (ended.status === 'made_port' || ended.status === 'anchored') {
         if (s.settings.bell) ambience.bell('port');
-        if (s.settings.notifyLanding) platform.notify(`Made port in ${ended.toLabel}`, `${(ended.sailedNm ?? 0).toFixed(1)} nm sailed. Log it and go ashore.`);
-      } else if (ended.status === 'anchored') {
-        if (s.settings.bell) ambience.bell('port');
-        if (s.settings.notifyLanding) platform.notify('Watch complete', `Anchored at sea on the way to ${ended.toLabel}. Pick up from here next watch.`);
+        if (s.settings.notifyLanding) {
+          const title = ended.status === 'made_port' ? `Made port in ${ended.toLabel}` : 'Watch complete';
+          const body =
+            ended.status === 'made_port'
+              ? `${(ended.sailedNm ?? 0).toFixed(1)} nm sailed. Log it and go ashore.`
+              : `Anchored at sea on the way to ${ended.toLabel}. Pick up from here next watch.`;
+          loadPorts()
+            .then((idx) => earnedBy(getState(), idx.byId, ended).map((a) => a.title))
+            .catch(() => [] as string[])
+            .then((won) => platform.notify(title, won.length ? `${body} New achievement: ${won.join(', ')}.` : body));
+        }
       }
     };
     check();

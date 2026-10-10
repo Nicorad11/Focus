@@ -7,13 +7,13 @@ import { WATCH_PRESETS } from '../../lib/defaults';
 import { day, dist, distRound, minutes, plural, time } from '../../lib/format';
 import { formatPosition, pointAlong, sliceRoute, type LonLat } from '../../lib/geo';
 import { useNow } from '../../lib/hooks';
-import { exploreBand, exploreRadius, oneWatchScore, suggest, type Destination } from '../../lib/passage';
+import { exploreBand, exploreRadius, farCourse, oneWatchScore, suggest, type Destination } from '../../lib/passage';
 import { platform } from '../../lib/platform';
 import { placeLine, portsWithin, searchPorts, type PortIndex } from '../../lib/ports';
 import { explore, seaRoute } from '../../lib/routing';
 import { getState, setState, useStore } from '../../lib/store';
 import type { Harbour } from '../../lib/types';
-import { anchoredPassage, boatPortId, castOff, plannedNmFor, portStamps, watchesNeeded, MS_PER_NM } from '../../lib/voyage';
+import { anchoredPassage, boatPortId, castOff, plannedNmFor, portStamps, wake, watchesNeeded, MS_PER_NM } from '../../lib/voyage';
 import { toast } from '../../components/Toasts';
 import type { ChartView } from './ChartScreen';
 
@@ -49,6 +49,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
   const setWatchMin = (m: number) => setState((s) => ({ ...s, settings: { ...s.settings, watchMin: Math.max(5, Math.min(240, Math.round(m))) } }));
 
   const [sugg, setSugg] = useState<{ key: string; one: Destination[]; longer: Destination[] } | null>(null);
+  const [far, setFar] = useState<{ key: string; dest: Destination } | null>(null);
   const [routingError, setRoutingError] = useState<string | null>(null);
   const [sel, setSel] = useState<Sel>(anchored ? { kind: 'resume' } : null);
   const [extra, setExtra] = useState<Destination | null>(null);
@@ -61,6 +62,9 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
 
   const visited = useMemo(() => new Set(portStamps(getState()).map((p) => p.portId)), [watchesAll]); // eslint-disable-line react-hooks/exhaustive-deps
   const sugKey = `${originKey}|${watchMin}`;
+  const farDest = far && far.key === sugKey ? far.dest : null;
+  const suggested = useMemo(() => (sugg ? [...sugg.one, ...sugg.longer, ...(farDest ? [farDest] : [])] : []), [sugg, farDest]);
+  const wakeRoutes = useMemo(() => wake(getState(), 200), [watchesAll]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // plot courses to harbours in reach
   useEffect(() => {
@@ -74,6 +78,17 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
         if (cancelled) return;
         const s = suggest(routed, ports, origin, watchMin, originPort && !anchored ? originPort.id : null, visited);
         setSugg({ key: sugKey, ...s });
+        // then one far harbour, several watches away, for going further
+        const f = farCourse(watchMin);
+        const bigPorts = portsWithin(ports, origin, f.radius)
+          .filter((p) => p.size >= 3)
+          .map((p) => ({ id: p.id, lon: p.lon, lat: p.lat }));
+        return explore(origin, f.radius, f.band, bigPorts).then((farRouted) => {
+          if (cancelled) return;
+          const shown = new Set([...s.one, ...s.longer].map((d) => d.port.id));
+          const dest = f.pick(farRouted, ports, origin, visited, shown);
+          setFar(dest ? { key: sugKey, dest } : null);
+        });
       },
       (e) => {
         if (!cancelled) setRoutingError(String(e.message ?? e));
@@ -90,7 +105,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
     if (!sugg || sugg.key !== sugKey) return;
     setSel((cur) => {
       if (cur?.kind === 'resume') return cur;
-      if (cur?.kind === 'port' && (extra?.port.id === cur.id || [...sugg.one, ...sugg.longer].some((d) => d.port.id === cur.id))) return cur;
+      if (cur?.kind === 'port' && (extra?.port.id === cur.id || suggested.some((d) => d.port.id === cur.id))) return cur;
       if (anchored) return { kind: 'resume' };
       const best = [...sugg.one].sort((a, b) => oneWatchScore(a, watchMin) - oneWatchScore(b, watchMin))[0] ?? sugg.longer[0];
       return best ? { kind: 'port', id: best.port.id } : null;
@@ -104,7 +119,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
       setSel({ kind: 'resume' });
       return;
     }
-    const known = sugg ? [...sugg.one, ...sugg.longer].find((d) => d.port.id === id) : null;
+    const known = suggested.find((d) => d.port.id === id) ?? null;
     if (known) {
       setSel({ kind: 'port', id });
       return;
@@ -144,8 +159,8 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
       return { port: anchoredDest, nm: remaining, route: sliceRoute(anchored.route, anchored.sailedNm, anchored.nm), watches: watchesNeeded(remaining, watchMin) };
     }
     if (extra && extra.port.id === sel.id) return { ...extra, watches: watchesNeeded(extra.nm, watchMin) };
-    return sugg ? [...sugg.one, ...sugg.longer].find((d) => d.port.id === sel.id) ?? null : null;
-  }, [sel, sugg, extra, anchored, anchoredDest, watchMin]);
+    return suggested.find((d) => d.port.id === sel.id) ?? null;
+  }, [sel, suggested, extra, anchored, anchoredDest, watchMin]);
 
   const plannedNm = selected ? plannedNmFor(selected.nm, watchMin) : 0;
   const finishes = selected ? plannedNm >= selected.nm - 0.01 : false;
@@ -157,7 +172,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
     if (!origin) return;
     const chartPorts: ChartPort[] = [];
     if (originPort && !anchored) chartPorts.push({ id: originPort.id, pos: [originPort.lon, originPort.lat], name: originPort.name, kind: 'origin' });
-    const options = sugg ? [...sugg.one, ...sugg.longer] : [];
+    const options = [...suggested];
     if (extra && !options.some((o) => o.port.id === extra.port.id)) options.push(extra);
     if (anchored && anchoredDest) options.push({ port: anchoredDest, nm: anchored.nm - anchored.sailedNm, route: [], watches: 1 });
     for (const d of options) {
@@ -174,14 +189,17 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
     if (selected) pts.push(...selected.route);
     setView({
       ports: chartPorts,
-      routes: selected ? [{ id: 'plan', coords: selected.route, style: 'plan' }] : [],
+      routes: [
+        ...wakeRoutes.map((coords, i) => ({ id: 'wake' + i, coords, style: 'wake' as const })),
+        ...(selected ? [{ id: 'plan', coords: selected.route, style: 'plan' as const }] : []),
+      ],
       boat: anchored ? { pos: origin, course: pointAlong(anchored.route, anchored.sailedNm).course } : null,
       fit: { key: `plan|${sugKey}|${extra?.port.id ?? ''}|${sugg ? 1 : 0}`, points: pts, padding: narrow ? { top: 60, bottom: 40, left: 30, right: 30 } : { top: 110, bottom: 60, left: 70, right: 470 }, maxZoom: 9 },
       harbours: true,
       label: selected ? `Chart: planned passage from ${anchored ? 'your position at sea' : originPort?.name} to ${selected.port.name}` : 'Chart of nearby harbours',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originKey, sugg, extra, selected, settings.units, narrow]);
+  }, [originKey, suggested, extra, selected, settings.units, narrow, wakeRoutes]);
 
   const results = useMemo(() => (query.trim() ? searchPorts(ports, query, origin ?? undefined, 6) : []), [query, ports, originKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -357,12 +375,12 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
               ))}
           </section>
 
-          {(loading || sugg.longer.length > 0) && (
+          {(loading || sugg.longer.length > 0 || farDest) && (
             <section className="plan-section tight">
               <h2 className="eyebrow plan-h2">Longer passages</h2>
               {loading && <OptionSkeleton n={2} />}
               {!loading &&
-                sugg.longer.map((d) => (
+                [...sugg.longer, ...(farDest ? [farDest] : [])].map((d) => (
                   <DestButton
                     key={d.port.id}
                     selected={sel?.kind === 'port' && sel.id === d.port.id}
@@ -378,7 +396,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
             </section>
           )}
 
-          {extra && !(sugg && [...sugg.one, ...sugg.longer].some((d) => d.port.id === extra.port.id)) && (
+          {extra && !suggested.some((d) => d.port.id === extra.port.id) && (
             <section className="plan-section tight">
               <h2 className="eyebrow plan-h2">Your choice</h2>
               <DestButton

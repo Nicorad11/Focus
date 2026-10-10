@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Flag } from '../../components/Flag';
+import { Medal } from '../../components/Medal';
+import { earnedBy } from '../../lib/achievements';
 import { AnchorBadge, PortStamp } from '../../components/Stamps';
 import { emit } from '../../lib/bus';
-import { dist, distRound, duration, plural, shortDate, time } from '../../lib/format';
+import { dist, distRound, plural, shortDate, time } from '../../lib/format';
 import { exploreBand, exploreRadius, suggest, waypointsAlong, type Destination } from '../../lib/passage';
 import { countryName, portsWithin, type PortIndex } from '../../lib/ports';
 import { navigate } from '../../lib/router';
@@ -31,6 +33,7 @@ export function PortDialog({ ports, watchId }: { ports: PortIndex; watchId: stri
 
   const stampCount = useMemo(() => portStamps(getState()).filter((p) => !p.home).length, [watchId]); // eslint-disable-line react-hooks/exhaustive-deps
   const visits = useStore((s) => s.watches.filter((w) => w.status === 'made_port' && w.toPortId === passage?.toPortId).length);
+  const newAchievements = useMemo(() => (watch ? earnedBy(getState(), ports.byId, watch) : []), [watch?.id, ports]); // eslint-disable-line react-hooks/exhaustive-deps
   const via = useMemo(() => (passage ? waypointsAlong(passage.route, ports, new Set([passage.fromPortId ?? '', passage.toPortId]), 1)[0] : undefined), [passage, ports]);
 
   // suggest the next leg from the new harbour
@@ -110,7 +113,7 @@ export function PortDialog({ ports, watchId }: { ports: PortIndex; watchId: stri
             </div>
             <div className="stat">
               <span className="label-caps">Watch</span>
-              <span className="stat-value">{duration(sailed * MS_PER_NM)}</span>
+              <span className="stat-value">{Math.round((sailed * MS_PER_NM) / 60_000)} min</span>
             </div>
             <div className="stat">
               <span className="label-caps">Purpose</span>
@@ -124,6 +127,21 @@ export function PortDialog({ ports, watchId }: { ports: PortIndex; watchId: stri
               <span className="stat-value">{watch.battened ? plural(watch.heldOff, 'try', 'tries') : '—'}</span>
             </div>
           </div>
+
+          {newAchievements.length > 0 && (
+            <div className="port-achievements" aria-label="Achievements earned on this watch">
+              {newAchievements.map((a) => (
+                <div key={a.id} className="port-ach">
+                  <Medal group={a.group} earned size={44} />
+                  <span className="port-ach-text">
+                    <span className="eyebrow teal">Achievement</span>
+                    <strong>{a.title}</strong>
+                    <span>{a.description}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="note-field">
             <label htmlFor="log-note">Note for the logbook</label>

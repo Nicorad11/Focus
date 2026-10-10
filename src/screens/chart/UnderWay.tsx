@@ -11,9 +11,9 @@ import { waypointsAlong } from '../../lib/passage';
 import { openMiniWindow } from '../../lib/pip';
 import { platform } from '../../lib/platform';
 import type { PortIndex } from '../../lib/ports';
-import { setState, useStore } from '../../lib/store';
+import { getState, setState, useStore } from '../../lib/store';
 import type { SoundId } from '../../lib/types';
-import { activeWatch, endWatch, passageOf, progress, watchesNeeded } from '../../lib/voyage';
+import { activeWatch, endWatch, passageOf, progress, wake, watchesNeeded } from '../../lib/voyage';
 import type { ChartView } from './ChartScreen';
 
 interface Props {
@@ -48,6 +48,9 @@ export function UnderWay({ ports, setView, chart, narrow }: Props) {
     [passage, ports],
   );
 
+  // earlier passages, drawn faintly so the voyage reads as one long wake
+  const wakeRoutes = useMemo(() => wake(getState(), 200), [watch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const prog = watch ? progress(watch, now) : null;
   const posNm = watch && prog ? Math.min(passage?.nm ?? 0, watch.startNm + prog.sailedNm) : 0;
   const here = passage ? pointAlong(passage.route, posNm) : null;
@@ -61,6 +64,7 @@ export function UnderWay({ ports, setView, chart, narrow }: Props) {
     setView({
       ports: chartPorts,
       routes: [
+        ...wakeRoutes.map((coords, i) => ({ id: 'wake' + i, coords, style: 'wake' as const })),
         { id: 'done', coords: sliceRoute(passage.route, 0, posNm), style: 'done' },
         { id: 'todo', coords: sliceRoute(passage.route, posNm, passage.nm), style: 'todo' },
       ],

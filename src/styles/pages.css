@@ -847,6 +847,296 @@
   color: var(--ink-3);
 }
 
+/* voyage */
+.papers-sub {
+  font-size: 12.5px;
+  color: var(--chrome-text-2);
+}
+
+.voyage-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.wake-card,
+.voyage-grid > .card {
+  gap: 10px;
+}
+
+.wake-chart {
+  position: relative;
+  height: 340px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.wake-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wake-where {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 18px;
+}
+
+.days-at-sea {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.das-scroll {
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.das-grid {
+  display: grid;
+  grid-template-columns: 18px auto;
+  grid-template-rows: 16px auto;
+  column-gap: 6px;
+  row-gap: 4px;
+  width: max-content;
+}
+
+.das-months {
+  grid-column: 2;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 17px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.das-days {
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: repeat(7, 17px);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  align-items: center;
+}
+
+.das-cells {
+  grid-row: 2;
+  grid-column: 2;
+  display: flex;
+  gap: 3px;
+}
+
+.das-col {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  gap: 3px;
+}
+
+.das-cell {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--seq-0);
+}
+
+.das-cell.s1 {
+  background: var(--seq-1);
+}
+
+.das-cell.s2 {
+  background: var(--seq-2);
+}
+
+.das-cell.s3 {
+  background: var(--seq-3);
+}
+
+.das-cell.s4 {
+  background: var(--seq-4);
+}
+
+.das-cell.future {
+  background: transparent;
+  border: 1px dashed var(--line);
+}
+
+.das-cell.today {
+  box-shadow: 0 0 0 1.5px var(--red);
+}
+
+.das-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.das-legend > span:first-child {
+  margin-right: 4px;
+}
+
+.das-legend-note {
+  margin-left: 10px;
+}
+
+.das-tip {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 8px));
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: var(--chrome);
+  color: #fff;
+  font-size: 12.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.ach-latest {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+
+.ach-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0 6px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.ach-group:first-of-type {
+  border-top: 0;
+}
+
+.ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px 16px;
+}
+
+.ach {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.ach-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ach-title {
+  font-weight: 650;
+  font-size: 15px;
+}
+
+.ach:not(.done) .ach-title {
+  color: var(--ink-2);
+}
+
+.ach-desc {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.ach-status {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ach-status.earned {
+  color: var(--teal-ink);
+  font-weight: 600;
+}
+
+.ach-bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--progress-track);
+  overflow: hidden;
+  margin-top: 4px;
+  max-width: 180px;
+}
+
+.ach-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--teal);
+}
+
+.medal {
+  flex-shrink: 0;
+}
+
+.medal-face {
+  fill: transparent;
+}
+
+.medal-ring {
+  fill: none;
+  stroke: var(--line-dashed);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+}
+
+.medal-rope {
+  fill: none;
+  stroke: none;
+}
+
+.medal-motif {
+  stroke: var(--disabled);
+}
+
+.medal.earned .medal-face {
+  fill: var(--teal-tint);
+}
+
+.medal.earned .medal-ring {
+  stroke: var(--teal);
+  stroke-width: 2.2;
+  stroke-dasharray: none;
+}
+
+.medal.earned .medal-rope {
+  stroke: var(--teal);
+  stroke-width: 1;
+  stroke-dasharray: 2.2 1.6;
+}
+
+.medal.earned .medal-motif {
+  stroke: var(--ink);
+}
+
+@media (max-width: 1100px) {
+  .voyage-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 900px) {
   .week-value {
     font-size: 26px;

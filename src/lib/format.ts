@@ -51,6 +51,20 @@ export function duration(ms: number): string {
   return `${h} h ${String(m).padStart(2, '0')} min`;
 }
 
+/** Time at sea: "42 min", "5 h 12 min", "1 d 4 h" */
+export function seaTime(ms: number): string {
+  const min = Math.round(ms / 60_000);
+  if (min < 60) return `${min} min`;
+  if (min < 24 * 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m ? `${h} h ${String(m).padStart(2, '0')} min` : `${h} h`;
+  }
+  const d = Math.floor(min / 1440);
+  const h = Math.floor((min % 1440) / 60);
+  return h ? `${d} d ${h} h` : `${d} d`;
+}
+
 /** "62 min" for a planned watch length */
 export function minutes(nm: number): string {
   return `${Math.round(nm)} min`;

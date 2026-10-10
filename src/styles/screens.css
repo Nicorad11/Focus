@@ -877,6 +877,37 @@
   color: var(--ink-3);
 }
 
+/* achievements earned on this watch */
+.port-achievements {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.port-ach {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px 10px 10px;
+  border-radius: 14px;
+  background: var(--teal-tint);
+  animation: dialog-in 0.5s 0.2s both cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.port-ach-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.port-ach-text strong {
+  font-size: 15.5px;
+  color: var(--ink);
+}
+
 /* welcome */
 .welcome {
   width: 560px;

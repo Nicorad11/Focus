@@ -22,6 +22,24 @@ the **Leeward for Windows** design canvas:
 | FlightLog        | Logbook                                   |
 | Flight miles     | Nautical miles sailed                     |
 
+## The voyage goes on
+
+The boat stays where your last watch left it: moored in the harbour you reached, or anchored at sea
+partway through a passage. The next watch starts from there, so you keep sailing further. The
+**Voyage** page keeps the whole trip:
+
+- **Your wake**: every passage you've sailed on one chart, from your home port to where you are now.
+- **Time at sea**: total hours, days at sea, current and best streak, and how far you've got from home.
+- **Days at sea**: a calendar of the last 26 weeks, darker for longer at sea.
+- **Achievements** (30): distance (Century, Thousand-mile mariner, Around the world at 21,600 nm),
+  ports and countries, long passages, the old line-crossing traditions (Shellback for the Equator,
+  Bluenose for the Arctic Circle, Golden Dragon for the 180th meridian), time at sea and streaks,
+  the ship's watches (Middle, Morning, Dog), and Batten down discipline. They are worked out from
+  the logbook, so watches you sailed before an achievement existed still count. New ones appear on
+  the *Made port* card and in the landing notification.
+
+The planner also offers one far harbour, about four watches away, under *Longer passages*.
+
 ## Run it in a browser (for testing)
 
 Needs [Node.js 22](https://nodejs.org).
@@ -112,7 +130,8 @@ src/                    the app (React + TypeScript), shared by browser and desk
   lib/voyage.ts         watch engine (pure functions, unit-tested)
   lib/routing/          sea routing worker (unit-tested against the real coastline)
   lib/platform.ts       browser vs Windows differences behind one interface
-  screens/              plan / under way / made port, logbook, ports, batten down, settings
+  lib/achievements.ts   achievements and lifetime stats, derived from the logbook (unit-tested)
+  screens/              plan / under way / made port, logbook, voyage, batten down, settings
 src-tauri/              Windows shell (Rust, Tauri 2)
   src/blocker.rs        foreground-window watcher and shield
   src/helper.rs         127.0.0.1 endpoint for the browser helper
@@ -148,5 +167,4 @@ Following the breakdown's build plan, phases 1 (core loop) and 2 (Batten down) a
 - **Code signing** for the installer, and optionally a Microsoft Store listing.
 - **Store listings** for the browser helper (Chrome Web Store, Edge Add-ons, Mozilla) so it installs
   in one click instead of *Load unpacked*.
-- From the feature list: Random Route, the window view (WebGL cabin scene), club cards beyond the
-  rank on the Ports page, localisation.
+- From the feature list: Random Route, the window view (WebGL cabin scene), localisation.

@@ -2,7 +2,7 @@
 // so the timer, chart position and progress can be rebuilt at any moment — after a reload, a crash,
 // sleep or a reboot. Nothing counts ticks.
 
-import { pointAlong, type LonLat } from './geo';
+import { pointAlong, sliceRoute, type LonLat } from './geo';
 import type { AppState, Passage, Watch } from './types';
 
 /** One nautical mile per focused minute. */
@@ -211,4 +211,18 @@ export function portStamps(s: AppState): { portId: string; at: number; home: boo
   const sorted = [...s.watches].filter((w) => w.status === 'made_port').sort((a, b) => (a.endedAt ?? 0) - (b.endedAt ?? 0));
   for (const w of sorted) if (!out.has(w.toPortId)) out.set(w.toPortId, { portId: w.toPortId, at: w.endedAt ?? w.startedAt, home: false });
   return [...out.values()];
+}
+
+/** The tracks of finished watches, newest last: the boat's wake across every passage. */
+export function wake(s: AppState, limit = 400): LonLat[][] {
+  const byId = new Map(s.passages.map((p) => [p.id, p]));
+  return s.watches
+    .filter((w) => w.status !== 'under_way' && (w.sailedNm ?? 0) > 0.01)
+    .sort((a, b) => a.startedAt - b.startedAt)
+    .slice(-limit)
+    .map((w) => {
+      const p = byId.get(w.passageId);
+      return p ? sliceRoute(p.route, w.startNm, w.startNm + (w.sailedNm ?? 0)) : [];
+    })
+    .filter((seg) => seg.length >= 2);
 }

@@ -72,6 +72,32 @@ export function suggest(
   return { one, longer };
 }
 
+/**
+ * One far harbour for going further: several watches away (about four), a real port rather than a
+ * small landing, preferably one not stamped yet and not already offered.
+ */
+export function farCourse(watchMin: number) {
+  const W = watchMin;
+  return {
+    radius: Math.min(900, W * 6 * 1.1 + 20),
+    band: [W * STRETCH * 1.8, W * 6 + 4] as [number, number],
+    pick(routed: RoutedPort[], ports: PortIndex, origin: LonLat, visited: Set<string>, exclude: Set<string>): Destination | null {
+      let best: Destination | null = null;
+      let bestScore = Infinity;
+      for (const r of routed) {
+        const port = ports.byId.get(r.id);
+        if (!port || exclude.has(port.id) || distanceNm(origin, [port.lon, port.lat]) < 5) continue;
+        const score = Math.abs(r.nm - W * 4) / W + (6 - port.size) * 0.15 + (visited.has(port.id) ? 0.6 : 0);
+        if (score < bestScore) {
+          bestScore = score;
+          best = { port, nm: r.nm, route: r.route, watches: watchesNeeded(r.nm, W) };
+        }
+      }
+      return best;
+    },
+  };
+}
+
 export interface Waypoint {
   port: Harbour;
   atNm: number;

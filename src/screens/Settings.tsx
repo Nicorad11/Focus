@@ -280,7 +280,7 @@ export function Settings({ ports }: { ports: PortIndex | null }) {
           <h2 id="data-title" className="card-title">
             Your data
           </h2>
-          <p className="card-text">No account and no tracking: your logbook stays on this device. Back it up to move it to another computer.</p>
+          <p className="card-text">No account and no tracking. Your logbook, where the boat is, and your achievements are saved on this device as you go. Back them up to move them to another computer.</p>
           <div className="button-row">
             <button
               className="btn white"
