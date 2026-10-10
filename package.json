@@ -2,7 +2,7 @@
   "name": "leeward",
   "private": true,
   "version": "0.1.0",
-  "description": "Leeward — a focus timer where every focused minute sails you one nautical mile.",
+  "description": "Leeward — a focus timer where your boat sails a real passage while you work.",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,7 +1,7 @@
 [package]
 name = "leeward"
 version = "0.1.0"
-description = "Leeward: every focused minute sails one nautical mile"
+description = "Leeward: a focus timer where your boat sails a real passage while you work"
 edition = "2021"
 rust-version = "1.80"
 publish = false

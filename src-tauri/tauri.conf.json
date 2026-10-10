@@ -35,7 +35,7 @@
     "targets": ["nsis", "msi"],
     "publisher": "Leeward",
     "category": "Productivity",
-    "shortDescription": "A focus timer where every focused minute sails one nautical mile",
+    "shortDescription": "A focus timer where your boat sails a real passage while you work",
     "longDescription": "Leeward turns focus sessions into passages between real harbours. Choose how long to focus, cast off, and make port when the watch is done. Batten down distracting apps and sites while you sail.",
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico", "icons/icon.png"],
     "resources": {
