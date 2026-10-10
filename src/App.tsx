@@ -19,12 +19,16 @@ import { Settings } from './screens/Settings';
 import { Welcome } from './screens/Welcome';
 import { MiniWindow, ShieldWindow, TrayFlyout } from './screens/windows';
 
+// A page that embeds Leeward may already say light or dark on the root element; follow it in "system" mode.
+const hostTheme = document.documentElement.dataset.theme;
+
 function useTheme() {
   const pref = useStore((s) => s.settings.theme);
   useEffect(() => {
     const m = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
-      const night = pref === 'night' || (pref === 'system' && m.matches);
+      const systemNight = hostTheme === 'dark' ? true : hostTheme === 'light' ? false : m.matches;
+      const night = pref === 'night' || (pref === 'system' && systemNight);
       document.documentElement.dataset.theme = night ? 'night' : 'day';
     };
     apply();
