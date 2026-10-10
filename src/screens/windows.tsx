@@ -33,6 +33,17 @@ export function TrayFlyout() {
   const portId = useStore(boatPortId);
   const ports = usePorts();
   const now = useNow(1000);
+  // the flyout window fits its content
+  useEffect(() => {
+    const el = document.querySelector('.tray');
+    if (!el || !platform.desktop) return;
+    const ro = new ResizeObserver(async () => {
+      const { getCurrentWindow, LogicalSize } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().setSize(new LogicalSize(380, Math.ceil(el.getBoundingClientRect().height)));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     document.body.classList.add('tray-window');
     const hide = () => void invoke('hide_tray_flyout').catch(() => {});

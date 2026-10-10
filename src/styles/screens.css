@@ -1053,6 +1053,17 @@
     overflow: visible;
   }
 
+  .plan-foot {
+    position: sticky;
+    bottom: 0;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 -8px 20px rgba(19, 35, 58, 0.08);
+  }
+
+  .plan-panel {
+    overflow: visible;
+  }
+
   .home-chip {
     max-width: calc(100% - 40px);
     top: 12px;

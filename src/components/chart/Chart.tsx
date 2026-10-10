@@ -428,6 +428,8 @@ export function Chart({
         });
     };
     map.on('load', () => {
+      // the theme may have changed while the style was loading
+      applyColors(map, readColors());
       setReady(true);
       onMove();
       updateRegion();

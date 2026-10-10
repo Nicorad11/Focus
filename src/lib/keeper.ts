@@ -74,16 +74,24 @@ export function useWatchKeeper(): { idle: IdlePrompt | null; dismissIdle: () => 
     return subscribe(check);
   }, []);
 
-  // keep the blocker's list current when settings change mid-watch
+  // keep the blocker's list and the core's preferences current when settings change
   useEffect(() => {
     let last = '';
-    return subscribe(() => {
+    let lastPrefs = '';
+    const sync = () => {
       const key = JSON.stringify(blockerConfig());
       if (key !== last) {
         last = key;
         pushBlocker();
       }
-    });
+      const closeToTray = getState().settings.closeToTray;
+      if (String(closeToTray) !== lastPrefs) {
+        lastPrefs = String(closeToTray);
+        platform.setPrefs({ closeToTray });
+      }
+    };
+    sync();
+    return subscribe(sync);
   }, []);
 
   // events from the Rust core (blocker, tray, hotkey)

@@ -1,7 +1,7 @@
 /* ---------- window shell: title bar, rail, main surface ---------- */
 
 .shell {
-  height: 100vh;
+  height: 100%;
   min-height: 560px;
   display: flex;
   flex-direction: column;

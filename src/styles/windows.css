@@ -189,7 +189,6 @@ body.tray-window #root {
 
 /* tray flyout */
 .tray {
-  min-height: 100vh;
   background: var(--panel);
   border: 1px solid var(--line-strong);
   border-radius: 12px;

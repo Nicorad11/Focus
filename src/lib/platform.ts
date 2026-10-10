@@ -40,6 +40,8 @@ export interface Platform {
   setProgress(fraction: number | null): void;
   setTray(minutesLeft: number | null, tooltip: string): void;
   setMini(show: boolean): void;
+  /** desktop: preferences the core needs even when no window is open */
+  setPrefs(p: { closeToTray: boolean }): void;
   notificationPermission(): Promise<NotificationPermission>;
   requestNotifications(): Promise<boolean>;
   notify(title: string, body: string): void;
@@ -81,6 +83,7 @@ function webPlatform(): Platform {
       document.title = minutesLeft == null ? baseTitle : `${tooltip} · Leeward`;
     },
     setMini() {},
+    setPrefs() {},
     async notificationPermission() {
       return typeof Notification === 'undefined' ? 'denied' : Notification.permission;
     },
@@ -181,6 +184,7 @@ function desktopPlatform(): Platform {
       );
     },
     setMini: (show) => void swallow(call('show_mini', { show })),
+    setPrefs: (p) => void swallow(call('set_prefs', { closeToTray: p.closeToTray })),
     async notificationPermission() {
       const n = await import('@tauri-apps/plugin-notification');
       return (await n.isPermissionGranted()) ? 'granted' : 'default';
@@ -233,46 +237,51 @@ function desktopPlatform(): Platform {
   };
 }
 
-/** 32×32 tray icon: the Leeward pennant, with the minutes left on a badge while under way. */
+/** 32×32 tray icon: the Leeward pennant, or the minutes left while under way. */
 function drawTrayIcon(minutesLeft: number | null): Uint8Array {
   const c = document.createElement('canvas');
   c.width = c.height = 32;
   const g = c.getContext('2d')!;
-  g.lineCap = 'round';
-  g.strokeStyle = '#E8EDF2';
-  g.lineWidth = 2.4;
+  g.fillStyle = '#13233A';
   g.beginPath();
-  g.moveTo(6, 3);
-  g.lineTo(6, 29);
-  g.stroke();
-  g.fillStyle = '#E0442C';
-  g.beginPath();
-  g.moveTo(7.5, 4);
-  g.lineTo(29, 4);
-  g.lineTo(22, 11);
-  g.lineTo(29, 18);
-  g.lineTo(7.5, 18);
-  g.closePath();
+  g.roundRect(0, 0, 32, 32, 7);
   g.fill();
-  if (minutesLeft != null) {
-    const text = minutesLeft > 99 ? '99' : String(Math.max(0, minutesLeft));
-    g.fillStyle = '#13233A';
+  if (minutesLeft == null) {
+    g.lineCap = 'round';
+    g.strokeStyle = '#E8EDF2';
+    g.lineWidth = 2.6;
     g.beginPath();
-    g.roundRect(9, 17, 23, 15, 7);
+    g.moveTo(9, 5);
+    g.lineTo(9, 27);
+    g.stroke();
+    g.fillStyle = '#E0442C';
+    g.beginPath();
+    g.moveTo(10.5, 6);
+    g.lineTo(27, 6);
+    g.lineTo(22, 11.5);
+    g.lineTo(27, 17);
+    g.lineTo(10.5, 17);
+    g.closePath();
     g.fill();
+  } else {
+    const text = minutesLeft > 99 ? '99+' : String(Math.max(0, minutesLeft));
     g.fillStyle = '#FFFFFF';
-    g.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
+    g.font = `700 ${text.length > 2 ? 12 : text.length === 2 ? 17 : 20}px "IBM Plex Mono", ui-monospace, monospace`;
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillText(text, 20.5, 25);
+    g.fillText(text, 16, 14.5);
+    g.fillStyle = '#E0442C';
+    g.fillRect(6, 25, 20, 3);
   }
   return new Uint8Array(g.getImageData(0, 0, 32, 32).data.buffer);
 }
 
 export const platform: Platform = isTauri ? desktopPlatform() : webPlatform();
 
-/** Which window this document is: the route decides (#/mini, #/tray, #/shield). */
+/** Which window this document is. The desktop core tags its small windows; the hash works in a browser. */
 export function windowKind(): WindowKind {
+  const tagged = (window as unknown as { __LEEWARD_WINDOW__?: WindowKind }).__LEEWARD_WINDOW__;
+  if (tagged) return tagged;
   const h = location.hash;
   if (h.startsWith('#/mini')) return 'mini';
   if (h.startsWith('#/tray')) return 'tray';

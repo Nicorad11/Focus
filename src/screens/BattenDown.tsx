@@ -380,7 +380,13 @@ export function ShieldCard({
       <div className="shield-text">
         <span className="shield-title">{name} is below deck</span>
         <span className="shield-sub">
-          {minutes} min until you make port in <span className="serif">{port}</span>.
+          {minutes > 0 ? (
+            <>
+              {minutes} min until you make port in <span className="serif">{port}</span>.
+            </>
+          ) : (
+            'You’re on watch.'
+          )}
         </span>
         <div className="shield-actions">
           <button className="btn shield-back" onClick={onBack} tabIndex={preview ? -1 : 0}>
