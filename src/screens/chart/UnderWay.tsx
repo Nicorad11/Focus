@@ -13,7 +13,7 @@ import { platform } from '../../lib/platform';
 import type { PortIndex } from '../../lib/ports';
 import { getState, setState, useStore } from '../../lib/store';
 import type { SoundId } from '../../lib/types';
-import { activeWatch, endWatch, passageOf, progress, wake, watchesNeeded } from '../../lib/voyage';
+import { activeWatch, endWatch, knots, nmPerMinute, passageOf, progress, reachOf, speedOf, wake, watchesNeeded } from '../../lib/voyage';
 import type { ChartView } from './ChartScreen';
 
 interface Props {
@@ -88,7 +88,7 @@ export function UnderWay({ ports, setView, chart, narrow }: Props) {
   const finishesThisWatch = watch.startNm + watch.plannedNm >= passage.nm - 0.01;
   const totalWatches = finishesThisWatch
     ? watchesOnPassage
-    : watchesOnPassage + watchesNeeded(passage.nm - watch.startNm - watch.plannedNm, settings.watchMin);
+    : watchesOnPassage + watchesNeeded(passage.nm - watch.startNm - watch.plannedNm, reachOf(settings.watchMin, nmPerMinute(settings.pace)));
   const next = waypoints.find((w) => w.atNm > posNm + 0.05);
   const apps = settings.apps.filter((a) => a.enabled).length;
   const fraction = passage.nm > 0 ? posNm / passage.nm : 0;
@@ -117,7 +117,7 @@ export function UnderWay({ ports, setView, chart, narrow }: Props) {
         <div className="passage-meta">
           <Flag flag={purpose.flag} />
           <span>
-            {purpose.name} · cast off {time(watch.startedAt)}
+            {purpose.name} · cast off {time(watch.startedAt)} · {knots(speedOf(watch)).toLocaleString('en-GB', { maximumFractionDigits: 1 })} knots
           </span>
         </div>
         {watch.battened && (

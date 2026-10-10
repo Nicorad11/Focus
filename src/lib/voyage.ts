@@ -1,12 +1,42 @@
-// The watch engine. A watch is fully described by when it started and how far it is planned to sail,
-// so the timer, chart position and progress can be rebuilt at any moment — after a reload, a crash,
-// sleep or a reboot. Nothing counts ticks.
+// The watch engine. A watch is fully described by when it started, how far it is planned to sail and
+// how fast the boat goes, so the timer, chart position and progress can be rebuilt at any moment —
+// after a reload, a crash, sleep or a reboot. Nothing counts ticks.
 
 import { pointAlong, sliceRoute, type LonLat } from './geo';
 import type { AppState, Passage, Watch } from './types';
 
-/** One nautical mile per focused minute. */
-export const MS_PER_NM = 60_000;
+/** A cruising yacht's average speed through the water, in knots. */
+export const BOAT_KNOTS = 6;
+
+/**
+ * How passage time relates to real sailing time. At real time a 58 nm passage takes as long as it
+ * would at 6 knots (about 9 h 40 min); at half time it takes half of that.
+ */
+export type Pace = 'real' | 'half';
+export const PACES: Record<Pace, { name: string; factor: number }> = {
+  half: { name: 'Half time', factor: 2 },
+  real: { name: 'Real time', factor: 1 },
+};
+
+/** Nautical miles sailed per focused minute at a pace. */
+export function nmPerMinute(pace: Pace): number {
+  return (BOAT_KNOTS * (PACES[pace]?.factor ?? 2)) / 60;
+}
+
+export function knots(nmPerMin: number): number {
+  return nmPerMin * 60;
+}
+
+/** Watches logged before paces existed sailed one nautical mile a minute. */
+const LEGACY_NM_PER_MIN = 1;
+
+export function speedOf(w: Watch): number {
+  return w.nmPerMin ?? LEGACY_NM_PER_MIN;
+}
+
+function msPerNm(w: Watch): number {
+  return 60_000 / speedOf(w);
+}
 
 /** The last watch of a passage may run up to this much longer than the chosen watch length. */
 export const STRETCH = 1.25;
@@ -50,13 +80,18 @@ export function boatPosition(s: AppState, ports: Map<string, { lat: number; lon:
   return port ? [port.lon, port.lat] : null;
 }
 
-/** How far a watch of `watchMin` minutes takes you on a passage with `remainingNm` left. */
-export function plannedNmFor(remainingNm: number, watchMin: number): number {
-  return remainingNm <= watchMin * STRETCH ? remainingNm : watchMin;
+/** How far one watch carries you: its length in minutes times the boat's speed. */
+export function reachOf(watchMin: number, nmPerMin: number): number {
+  return watchMin * nmPerMin;
 }
 
-export function watchesNeeded(nm: number, watchMin: number): number {
-  return Math.max(1, Math.ceil((nm - (STRETCH - 1) * watchMin) / watchMin));
+/** How far a watch that reaches `reachNm` takes you on a passage with `remainingNm` left. */
+export function plannedNmFor(remainingNm: number, reachNm: number): number {
+  return remainingNm <= reachNm * STRETCH ? remainingNm : reachNm;
+}
+
+export function watchesNeeded(nm: number, reachNm: number): number {
+  return Math.max(1, Math.ceil((nm - (STRETCH - 1) * reachNm) / reachNm));
 }
 
 export interface Progress {
@@ -70,10 +105,11 @@ export interface Progress {
 }
 
 export function progress(w: Watch, now = Date.now()): Progress {
-  const plannedMs = w.plannedNm * MS_PER_NM;
+  const perNm = msPerNm(w);
+  const plannedMs = w.plannedNm * perNm;
   const elapsedMs = Math.max(0, Math.min(plannedMs, now - w.startedAt));
   return {
-    sailedNm: elapsedMs / MS_PER_NM,
+    sailedNm: elapsedMs / perNm,
     elapsedMs,
     remainingMs: plannedMs - elapsedMs,
     fraction: plannedMs > 0 ? elapsedMs / plannedMs : 1,
@@ -88,7 +124,10 @@ export interface CastOffPlan {
   /** … or start a new one */
   newPassage?: Omit<Passage, 'id' | 'sailedNm' | 'createdAt' | 'status'>;
   purposeId: string;
-  watchMin: number;
+  /** distance one watch covers (watch length × speed) */
+  reachNm: number;
+  /** the boat's speed for this watch */
+  nmPerMin: number;
   battened: boolean;
   fromLabel: string;
   toLabel: string;
@@ -113,7 +152,8 @@ export function castOff(s: AppState, plan: CastOffPlan, now = Date.now()): AppSt
     passageId: passage.id,
     purposeId: plan.purposeId,
     startNm: passage.sailedNm,
-    plannedNm: plannedNmFor(remaining, plan.watchMin),
+    plannedNm: plannedNmFor(remaining, plan.reachNm),
+    nmPerMin: plan.nmPerMin,
     startedAt: now,
     status: 'under_way',
     battened: plan.battened,
@@ -196,7 +236,7 @@ export function watchNm(w: Watch, now = Date.now()): number {
 
 /** Time spent focused in a watch, in ms. */
 export function watchMs(w: Watch, now = Date.now()): number {
-  return watchNm(w, now) * MS_PER_NM;
+  return watchNm(w, now) * msPerNm(w);
 }
 
 export function lifetimeNm(s: AppState, now = Date.now()): number {

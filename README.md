@@ -1,6 +1,6 @@
 # Leeward
 
-A focus timer where every focused minute sails you one nautical mile.
+A focus timer where your boat sails a real passage, at a real yacht's speed, while you work.
 
 Choose how long to focus and Leeward plots a passage to a real harbour that far away by sea. Cast
 off, and the boat crosses the chart while you work. Make port, collect the harbour's stamp, and
@@ -39,6 +39,21 @@ partway through a passage. The next watch starts from there, so you keep sailing
   the *Made port* card and in the landing notification.
 
 The planner also offers one far harbour, about four watches away, under *Longer passages*.
+
+## Pace
+
+The boat sails at a cruising yacht's 6 knots, so passages take as long as they would at sea. You
+start at **Half time** (12 knots, every passage takes half its real sailing time) and can switch to
+**Real time** under *Settings → Distance and pace*:
+
+| 58 nm, Copenhagen to Ystad | Half time (12 kn) | Real time (6 kn) |
+| -------------------------- | ----------------- | ---------------- |
+| Sailing time               | 4 h 50 min        | 9 h 40 min       |
+| One-hour watches           | 5                 | 10               |
+| A 60-minute watch reaches  | 12 nm             | 6 nm             |
+
+Each watch stores the speed it was sailed at, so changing the pace never rewrites the logbook, and a
+watch already under way keeps its pace.
 
 ## Run it in a browser (for testing)
 
@@ -104,7 +119,7 @@ npm run desktop:build   # installers in src-tauri/target/release/bundle/
 
 ## How it works
 
-- **The watch** is stored as its start time and planned distance (1 nm per minute). Time left,
+- **The watch** is stored as its start time, planned distance and the boat's speed. Time left,
   position and progress are recomputed from the clock, so a watch survives reloads, closing the app,
   sleep and reboots; a watch whose end passed while Leeward was closed lands on the next launch. If
   the clock jumps backwards the watch doesn't lose time.
@@ -115,8 +130,9 @@ npm run desktop:build   # installers in src-tauri/target/release/bundle/
   onto a local grid, a shortest path is searched over water (with a small cost for hugging the
   shore), then pulled tight into straight legs. Copenhagen to Ystad goes around Falsterbo: about 58 nm,
   where the great circle across Skåne is 44 nm. It runs in a web worker (`src/lib/routing`).
-- **Suggestions.** For a watch of *W* minutes Leeward offers three harbours reachable in one watch
-  (preferring real ports and spreading them around the compass) and two longer passages.
+- **Suggestions.** For a watch that reaches *R* nm (its minutes times the boat's speed) Leeward
+  offers three harbours reachable in one watch (preferring real ports and spreading them around the
+  compass) and two longer passages.
 - **The chart** is MapLibre GL drawing Natural Earth coastlines in the design's chart style: the
   1:50m coastline when zoomed out and 1:10m detail clipped to the region in view.
 - **Sound** is generated with the Web Audio API (swell and rigging, rain on deck, wind, ship's bell),

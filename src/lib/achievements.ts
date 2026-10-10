@@ -6,7 +6,7 @@
 
 import { distanceNm, pointAlong, sliceRoute, type LonLat } from './geo';
 import type { AppState, Harbour, Passage, Watch } from './types';
-import { MS_PER_NM } from './voyage';
+import { watchMs } from './voyage';
 
 export type AchievementGroup = 'distance' | 'ports' | 'passages' | 'lines' | 'time' | 'watches' | 'discipline';
 
@@ -164,10 +164,11 @@ export function evaluate(s: AppState, ports: Map<string, Harbour> | null, now = 
   for (const w of watches) {
     const at = w.endedAt ?? w.startedAt;
     const nm = w.sailedNm ?? 0;
+    const min = watchMs(w) / 60_000;
     totalNm += nm;
-    totalMs += nm * MS_PER_NM;
+    totalMs += min * 60_000;
     const day = dayKey(w.startedAt);
-    minutesByDay.set(day, (minutesByDay.get(day) ?? 0) + nm);
+    minutesByDay.set(day, (minutesByDay.get(day) ?? 0) + min);
 
     track('first-watch', 1, at);
     for (const id of ['nm-100', 'nm-500', 'nm-1000', 'nm-3000', 'nm-world']) track(id, totalNm, at);
@@ -180,7 +181,7 @@ export function evaluate(s: AppState, ports: Map<string, Harbour> | null, now = 
     track('streak-7', streak, at);
     track('streak-30', streak, at);
 
-    if (nm >= 89.99) earn('long-watch', at);
+    if (min >= 89.99) earn('long-watch', at);
     const hour = new Date(w.startedAt).getHours();
     if (hour < 4) earn('middle-watch', at);
     else if (hour < 8) earn('morning-watch', at);

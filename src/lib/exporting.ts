@@ -1,6 +1,6 @@
 import { convert, unitLabel } from './format';
 import type { AppState, Watch } from './types';
-import { MS_PER_NM, watchNm } from './voyage';
+import { watchMs, watchNm } from './voyage';
 
 const STATUS: Record<Watch['status'], string> = {
   under_way: 'under way',
@@ -36,7 +36,7 @@ export function logbookCSV(s: AppState, watches: Watch[], now = Date.now()): str
         w.fromLabel,
         w.toLabel,
         convert(nm, u).toFixed(2),
-        ((nm * MS_PER_NM) / 60000).toFixed(1),
+        (watchMs(w, now) / 60000).toFixed(1),
         s.purposes.find((p) => p.id === w.purposeId)?.name ?? '',
         STATUS[w.status],
         w.newPort ? 'yes' : 'no',

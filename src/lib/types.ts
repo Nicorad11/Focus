@@ -75,8 +75,10 @@ export interface Watch {
   purposeId: string;
   /** position along the passage route when the watch began */
   startNm: number;
-  /** distance this watch is planned to sail; one nautical mile per minute */
+  /** distance this watch is planned to sail */
   plannedNm: number;
+  /** boat speed in nautical miles per minute; missing on watches from before paces (1 nm a minute) */
+  nmPerMin?: number;
   /** wall-clock start, epoch ms */
   startedAt: number;
   endedAt?: number;
@@ -110,6 +112,8 @@ export interface Settings {
   units: Units;
   /** chosen watch length in minutes */
   watchMin: number;
+  /** passage time against real sailing time at 6 knots */
+  pace: 'real' | 'half';
   homePortId: string | null;
   sound: SoundId;
   volume: number;

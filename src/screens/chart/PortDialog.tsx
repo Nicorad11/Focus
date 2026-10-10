@@ -10,7 +10,7 @@ import { countryName, portsWithin, type PortIndex } from '../../lib/ports';
 import { navigate } from '../../lib/router';
 import { explore } from '../../lib/routing';
 import { getState, setState, useStore } from '../../lib/store';
-import { MS_PER_NM, portStamps, updateWatch } from '../../lib/voyage';
+import { nmPerMinute, portStamps, reachOf, updateWatch, watchMs } from '../../lib/voyage';
 
 const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -40,7 +40,7 @@ export function PortDialog({ ports, watchId }: { ports: PortIndex; watchId: stri
   useEffect(() => {
     if (!madePort || !to) return;
     let cancelled = false;
-    const W = settings.watchMin;
+    const W = reachOf(settings.watchMin, nmPerMinute(settings.pace));
     const origin: [number, number] = [to.lon, to.lat];
     const radius = exploreRadius(W);
     const cands = portsWithin(ports, origin, radius).map((p) => ({ id: p.id, lon: p.lon, lat: p.lat }));
@@ -56,7 +56,7 @@ export function PortDialog({ ports, watchId }: { ports: PortIndex; watchId: stri
     return () => {
       cancelled = true;
     };
-  }, [madePort, to, ports, settings.watchMin]);
+  }, [madePort, to, ports, settings.watchMin, settings.pace]);
 
   if (!watch || !passage) return null;
 
@@ -113,7 +113,7 @@ export function PortDialog({ ports, watchId }: { ports: PortIndex; watchId: stri
             </div>
             <div className="stat">
               <span className="label-caps">Watch</span>
-              <span className="stat-value">{Math.round((sailed * MS_PER_NM) / 60_000)} min</span>
+              <span className="stat-value">{Math.round(watchMs(watch) / 60_000)} min</span>
             </div>
             <div className="stat">
               <span className="label-caps">Purpose</span>

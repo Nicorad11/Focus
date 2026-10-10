@@ -3,6 +3,7 @@ import { AnchorIcon, LocateIcon, Pennant, SailIcon, ShieldIcon } from '../compon
 import { placeLine, nearestPorts, type PortIndex } from '../lib/ports';
 import { setState } from '../lib/store';
 import type { Harbour } from '../lib/types';
+import { BOAT_KNOTS, nmPerMinute, reachOf } from '../lib/voyage';
 import { PortPicker } from './Settings';
 
 const QUICK = ['x-copenhagen', 'x-cowes', 'x-ijmuiden', 'x-newport', 'x-palma', 'x-auckland'];
@@ -108,8 +109,8 @@ export function Welcome({ ports }: { ports: PortIndex }) {
                 <li>
                   <SailIcon size={22} />
                   <span>
-                    <strong>Choose how long to focus.</strong> Every focused minute carries you one nautical mile, so a 60-minute watch reaches a harbour about 60
-                    nm away.
+                    <strong>Choose how long to focus.</strong> Your boat sails a real passage while you work, in half the time a {BOAT_KNOTS}-knot yacht
+                    would need, so a 60-minute watch reaches a harbour about {Math.round(reachOf(60, nmPerMinute('half')))} nm away. Switch to real time in Settings.
                   </span>
                 </li>
                 <li>

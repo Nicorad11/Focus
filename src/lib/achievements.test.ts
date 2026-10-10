@@ -3,7 +3,9 @@ import { evaluate, earnedBy } from './achievements';
 import { initialState } from './defaults';
 import type { LonLat } from './geo';
 import type { AppState, Harbour } from './types';
-import { castOff, endWatch, MS_PER_NM, settle } from './voyage';
+import { castOff, endWatch, settle } from './voyage';
+
+const MIN = 60_000;
 
 const H = (id: string, cc: string, lat: number, lon: number): Harbour => ({ id, name: id, region: '', cc, lat, lon, size: 3 });
 const ports = new Map<string, Harbour>([
@@ -21,14 +23,22 @@ function moored(at = 'cph'): AppState {
   return s;
 }
 
-/** Sail a whole passage in one watch that starts at `t0`. */
-function sail(s: AppState, from: string, to: string, route: LonLat[], nm: number, t0: number, watchMin = 600): AppState {
+/** Sail a whole passage in one watch that starts at `t0`, by default at one nautical mile a minute. */
+function sail(s: AppState, from: string, to: string, route: LonLat[], nm: number, t0: number, watchMin = 600, nmPerMin = 1): AppState {
   s = castOff(
     s,
-    { newPassage: { fromPortId: from, fromPos: route[0], toPortId: to, route, nm }, purposeId: 'study', watchMin, battened: true, fromLabel: from, toLabel: to },
+    {
+      newPassage: { fromPortId: from, fromPos: route[0], toPortId: to, route, nm },
+      purposeId: 'study',
+      reachNm: watchMin * nmPerMin,
+      nmPerMin,
+      battened: true,
+      fromLabel: from,
+      toLabel: to,
+    },
     t0,
   );
-  return settle(s, t0 + nm * MS_PER_NM + 1000);
+  return settle(s, t0 + (nm / nmPerMin) * MIN + 1000);
 }
 
 const cphYst: LonLat[] = [
@@ -50,7 +60,7 @@ describe('achievements and voyage stats', () => {
     expect(got('nm-100').value).toBeCloseTo(61.7);
     expect(got('long-watch').earnedAt).toBeNull();
     expect(stats.totalNm).toBeCloseTo(61.7);
-    expect(stats.totalMs).toBeCloseTo(61.7 * MS_PER_NM);
+    expect(stats.totalMs).toBeCloseTo(61.7 * MIN);
     expect(stats.portsStamped).toBe(1);
     expect(stats.daysAtSea).toBe(1);
     expect(stats.currentStreak).toBe(1);
@@ -74,6 +84,17 @@ describe('achievements and voyage stats', () => {
     expect(achievements.find((a) => a.def.id === 'morning-watch')!.earnedAt).toBeNull(); // 09:00 is the forenoon watch
   });
 
+  it('counts time at sea by the clock, whatever the speed', () => {
+    const t0 = new Date(2026, 9, 10, 9, 0).getTime();
+    // 20 nm at half time (12 knots) is 100 minutes: a long watch, though only 20 miles
+    const s = sail(moored(), 'cph', 'yst', cphYst, 20, t0, 120, 0.2);
+    const { achievements, stats } = evaluate(s, ports, t0 + 3 * 3600_000);
+    expect(stats.totalNm).toBeCloseTo(20);
+    expect(stats.totalMs / MIN).toBeCloseTo(100);
+    expect(stats.minutesByDay.get([...stats.minutesByDay.keys()][0])).toBeCloseTo(100);
+    expect(achievements.find((a) => a.def.id === 'long-watch')!.earnedAt).not.toBeNull();
+  });
+
   it('notices crossing the Equator, but not a passage that stays north of it', () => {
     let s = moored('abc');
     const t0 = new Date(2026, 9, 10, 10, 0).getTime();
@@ -89,10 +110,10 @@ describe('achievements and voyage stats', () => {
     const t0 = new Date(2026, 9, 10, 17, 0).getTime();
     let s = castOff(
       moored(),
-      { newPassage: { fromPortId: 'cph', fromPos: cphYst[0], toPortId: 'yst', route: cphYst, nm: 61.7 }, purposeId: 'work', watchMin: 60, battened: false, fromLabel: 'cph', toLabel: 'yst' },
+      { newPassage: { fromPortId: 'cph', fromPos: cphYst[0], toPortId: 'yst', route: cphYst, nm: 61.7 }, purposeId: 'work', reachNm: 60, nmPerMin: 1, battened: false, fromLabel: 'cph', toLabel: 'yst' },
       t0,
     );
-    s = endWatch(s, t0 + 30 * MS_PER_NM, true);
+    s = endWatch(s, t0 + 30 * MIN, true);
     const { achievements, stats } = evaluate(s, ports);
     expect(stats.totalNm).toBeCloseTo(30);
     expect(stats.landfalls).toBe(0);

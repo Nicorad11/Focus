@@ -6,11 +6,12 @@ import { toast } from '../components/Toasts';
 import { ambience, SOUNDS } from '../lib/audio';
 import { FLAG_COLORS } from '../lib/defaults';
 import { logbookCSV } from '../lib/exporting';
+import { distRound } from '../lib/format';
 import { platform } from '../lib/platform';
 import { placeLine, searchPorts, type PortIndex } from '../lib/ports';
 import { getState, replaceState, resetState, setState, useStore } from '../lib/store';
 import type { FlagPattern, Purpose, Settings as SettingsT, SoundId, ThemePref, Units } from '../lib/types';
-import { activeWatch, anchoredPassage, boatPortId, newId } from '../lib/voyage';
+import { activeWatch, anchoredPassage, BOAT_KNOTS, boatPortId, knots, newId, nmPerMinute, PACES, reachOf, type Pace } from '../lib/voyage';
 
 function patch(p: Partial<SettingsT>) {
   setState((s) => ({ ...s, settings: { ...s.settings, ...p } }));
@@ -91,7 +92,7 @@ export function Settings({ ports }: { ports: PortIndex | null }) {
 
         <section className="card settings-card" aria-labelledby="units-title">
           <h2 id="units-title" className="card-title">
-            Distances
+            Distance and pace
           </h2>
           <Choice<Units>
             label="Units"
@@ -103,7 +104,22 @@ export function Settings({ ports }: { ports: PortIndex | null }) {
             ]}
             onChange={(units) => patch({ units })}
           />
-          <p className="hint">Whatever the units, one focused minute sails one nautical mile.</p>
+          <Choice<Pace>
+            label="Pace"
+            value={settings.pace}
+            options={[
+              ['half', PACES.half.name],
+              ['real', PACES.real.name],
+            ]}
+            onChange={(pace) => patch({ pace })}
+          />
+          <p className="hint">
+            {settings.pace === 'half'
+              ? `The boat makes ${Math.round(knots(nmPerMinute('half')))} knots, twice a cruising yacht's ${BOAT_KNOTS}, so every passage takes half its real sailing time.`
+              : `The boat makes ${BOAT_KNOTS} knots, like a cruising yacht, so every passage takes its real sailing time.`}{' '}
+            A {settings.watchMin}-minute watch reaches about {distRound(reachOf(settings.watchMin, nmPerMinute(settings.pace)), settings.units)}. Watches already
+            sailed keep the pace they were sailed at.
+          </p>
         </section>
 
         <section className="card settings-card" aria-labelledby="sound-title">
@@ -350,7 +366,7 @@ export function Settings({ ports }: { ports: PortIndex | null }) {
             About
           </h2>
           <p className="card-text">
-            Every focused minute sails one nautical mile. Coastlines from Natural Earth; harbours from Natural Earth and UN/LOCODE. The chart is for planning
+            Your boat sails at a cruising yacht’s {BOAT_KNOTS} knots, or twice that at half time. Coastlines from Natural Earth; harbours from Natural Earth and UN/LOCODE. The chart is for planning
             watches, not for navigation.
           </p>
         </section>

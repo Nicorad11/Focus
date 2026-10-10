@@ -4,7 +4,7 @@ import { Flag } from '../../components/Flag';
 import { AnchorIcon, MinusIcon, PlusIcon, SailIcon, SearchIcon, ShieldIcon } from '../../components/icons';
 import { ambience } from '../../lib/audio';
 import { WATCH_PRESETS } from '../../lib/defaults';
-import { day, dist, distRound, minutes, plural, time } from '../../lib/format';
+import { day, dist, distRound, duration, plural, time } from '../../lib/format';
 import { formatPosition, pointAlong, sliceRoute, type LonLat } from '../../lib/geo';
 import { useNow } from '../../lib/hooks';
 import { exploreBand, exploreRadius, farCourse, oneWatchScore, suggest, type Destination } from '../../lib/passage';
@@ -13,7 +13,7 @@ import { placeLine, portsWithin, searchPorts, type PortIndex } from '../../lib/p
 import { explore, seaRoute } from '../../lib/routing';
 import { getState, setState, useStore } from '../../lib/store';
 import type { Harbour } from '../../lib/types';
-import { anchoredPassage, boatPortId, castOff, plannedNmFor, portStamps, wake, watchesNeeded, MS_PER_NM } from '../../lib/voyage';
+import { anchoredPassage, boatPortId, BOAT_KNOTS, castOff, knots, nmPerMinute, PACES, plannedNmFor, portStamps, reachOf, wake, watchesNeeded } from '../../lib/voyage';
 import { toast } from '../../components/Toasts';
 import type { ChartView } from './ChartScreen';
 
@@ -47,6 +47,10 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
   const watchMin = settings.watchMin;
   const [customOpen, setCustomOpen] = useState(!WATCH_PRESETS.includes(watchMin));
   const setWatchMin = (m: number) => setState((s) => ({ ...s, settings: { ...s.settings, watchMin: Math.max(5, Math.min(240, Math.round(m))) } }));
+  const speed = nmPerMinute(settings.pace);
+  const reach = reachOf(watchMin, speed);
+  /** time to sail `nm` at this pace */
+  const sailTime = (nm: number) => duration((nm / speed) * 60_000);
 
   const [sugg, setSugg] = useState<{ key: string; one: Destination[]; longer: Destination[] } | null>(null);
   const [far, setFar] = useState<{ key: string; dest: Destination } | null>(null);
@@ -61,7 +65,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
   const routeSeq = useRef(0);
 
   const visited = useMemo(() => new Set(portStamps(getState()).map((p) => p.portId)), [watchesAll]); // eslint-disable-line react-hooks/exhaustive-deps
-  const sugKey = `${originKey}|${watchMin}`;
+  const sugKey = `${originKey}|${reach}`;
   const farDest = far && far.key === sugKey ? far.dest : null;
   const suggested = useMemo(() => (sugg ? [...sugg.one, ...sugg.longer, ...(farDest ? [farDest] : [])] : []), [sugg, farDest]);
   const wakeRoutes = useMemo(() => wake(getState(), 200), [watchesAll]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -70,16 +74,16 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
   useEffect(() => {
     if (!origin) return;
     let cancelled = false;
-    const radius = exploreRadius(watchMin);
+    const radius = exploreRadius(reach);
     const candidates = portsWithin(ports, origin, radius).map((p) => ({ id: p.id, lon: p.lon, lat: p.lat }));
     setRoutingError(null);
-    explore(origin, radius, exploreBand(watchMin), candidates).then(
+    explore(origin, radius, exploreBand(reach), candidates).then(
       (routed) => {
         if (cancelled) return;
-        const s = suggest(routed, ports, origin, watchMin, originPort && !anchored ? originPort.id : null, visited);
+        const s = suggest(routed, ports, origin, reach, originPort && !anchored ? originPort.id : null, visited);
         setSugg({ key: sugKey, ...s });
         // then one far harbour, several watches away, for going further
-        const f = farCourse(watchMin);
+        const f = farCourse(reach);
         const bigPorts = portsWithin(ports, origin, f.radius)
           .filter((p) => p.size >= 3)
           .map((p) => ({ id: p.id, lon: p.lon, lat: p.lat }));
@@ -107,7 +111,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
       if (cur?.kind === 'resume') return cur;
       if (cur?.kind === 'port' && (extra?.port.id === cur.id || suggested.some((d) => d.port.id === cur.id))) return cur;
       if (anchored) return { kind: 'resume' };
-      const best = [...sugg.one].sort((a, b) => oneWatchScore(a, watchMin) - oneWatchScore(b, watchMin))[0] ?? sugg.longer[0];
+      const best = [...sugg.one].sort((a, b) => oneWatchScore(a, reach) - oneWatchScore(b, reach))[0] ?? sugg.longer[0];
       return best ? { kind: 'port', id: best.port.id } : null;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,7 +140,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
         setRoutingError(`No sea route to ${port.name} from here.`);
         return;
       }
-      setExtra({ port, nm: r.nm, route: r.route, watches: watchesNeeded(r.nm, watchMin) });
+      setExtra({ port, nm: r.nm, route: r.route, watches: watchesNeeded(r.nm, reach) });
       setSel({ kind: 'port', id });
     } catch (e) {
       setRoutingError(String(e));
@@ -156,13 +160,13 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
     if (sel.kind === 'resume') {
       if (!anchored || !anchoredDest) return null;
       const remaining = anchored.nm - anchored.sailedNm;
-      return { port: anchoredDest, nm: remaining, route: sliceRoute(anchored.route, anchored.sailedNm, anchored.nm), watches: watchesNeeded(remaining, watchMin) };
+      return { port: anchoredDest, nm: remaining, route: sliceRoute(anchored.route, anchored.sailedNm, anchored.nm), watches: watchesNeeded(remaining, reach) };
     }
-    if (extra && extra.port.id === sel.id) return { ...extra, watches: watchesNeeded(extra.nm, watchMin) };
+    if (extra && extra.port.id === sel.id) return { ...extra, watches: watchesNeeded(extra.nm, reach) };
     return suggested.find((d) => d.port.id === sel.id) ?? null;
-  }, [sel, suggested, extra, anchored, anchoredDest, watchMin]);
+  }, [sel, suggested, extra, anchored, anchoredDest, reach]);
 
-  const plannedNm = selected ? plannedNmFor(selected.nm, watchMin) : 0;
+  const plannedNm = selected ? plannedNmFor(selected.nm, reach) : 0;
   const finishes = selected ? plannedNm >= selected.nm - 0.01 : false;
   const priorWatches = anchored ? watchesAll.filter((w) => w.passageId === anchored.id).length : 0;
   const totalWatches = selected ? (sel?.kind === 'resume' ? priorWatches + selected.watches : selected.watches) : 0;
@@ -174,7 +178,10 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
     if (originPort && !anchored) chartPorts.push({ id: originPort.id, pos: [originPort.lon, originPort.lat], name: originPort.name, kind: 'origin' });
     const options = [...suggested];
     if (extra && !options.some((o) => o.port.id === extra.port.id)) options.push(extra);
-    if (anchored && anchoredDest) options.push({ port: anchoredDest, nm: anchored.nm - anchored.sailedNm, route: [], watches: 1 });
+    if (anchored && anchoredDest) {
+      const left = anchored.nm - anchored.sailedNm;
+      options.push({ port: anchoredDest, nm: left, route: [], watches: watchesNeeded(left, reach) });
+    }
     for (const d of options) {
       const isSel = selected?.port.id === d.port.id;
       chartPorts.push({
@@ -199,7 +206,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
       label: selected ? `Chart: planned passage from ${anchored ? 'your position at sea' : originPort?.name} to ${selected.port.name}` : 'Chart of nearby harbours',
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originKey, suggested, extra, selected, settings.units, narrow, wakeRoutes]);
+  }, [originKey, suggested, extra, selected, settings.units, narrow, wakeRoutes, reach]);
 
   const results = useMemo(() => (query.trim() ? searchPorts(ports, query, origin ?? undefined, 6) : []), [query, ports, originKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -218,7 +225,8 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
           ? {
               passageId: anchored.id,
               purposeId: purpose.id,
-              watchMin,
+              reachNm: reach,
+              nmPerMin: speed,
               battened: batten,
               fromLabel: 'At sea',
               toLabel: selected.port.name,
@@ -232,7 +240,8 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
                 nm: selected.nm,
               },
               purposeId: purpose.id,
-              watchMin,
+              reachNm: reach,
+              nmPerMin: speed,
               battened: batten,
               fromLabel: anchored ? 'At sea' : originPort?.name ?? 'At sea',
               toLabel: selected.port.name,
@@ -263,7 +272,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
   }
 
   const loading = !sugg || sugg.key !== sugKey;
-  const eta = time(now + plannedNm * MS_PER_NM);
+  const eta = time(now + (plannedNm / speed) * 60_000);
 
   return (
     <>
@@ -338,7 +347,11 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
               </div>
             )}
             <p className="hint">
-              Minutes. Every focused minute carries you one nautical mile{settings.units !== 'nm' ? ` (${dist(1, settings.units, 2)})` : ''}.
+              Minutes.{' '}
+              {settings.pace === 'half'
+                ? `${PACES.half.name}: the boat makes ${Math.round(knots(speed))} knots, twice a cruising yacht's ${BOAT_KNOTS}.`
+                : `${PACES.real.name}: the boat makes ${BOAT_KNOTS} knots, like a cruising yacht.`}{' '}
+              This watch reaches about {distRound(reach, settings.units)}.
             </p>
           </section>
 
@@ -359,7 +372,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
           <section className="plan-section tight" aria-busy={loading}>
             <h2 className="eyebrow plan-h2">{anchored ? 'Or make for another harbour' : 'Reach in one watch'}</h2>
             {loading && !routingError && <OptionSkeleton n={3} />}
-            {!loading && sugg.one.length === 0 && <p className="hint">No harbour about {minutes(watchMin)} away by sea. Try another watch length, or search below.</p>}
+            {!loading && sugg.one.length === 0 && <p className="hint">No harbour about {distRound(reach, settings.units)} away by sea. Try another watch length, or search below.</p>}
             {!loading &&
               sugg.one.map((d) => (
                 <DestButton
@@ -369,7 +382,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
                   name={d.port.name}
                   line={placeLine(d.port)}
                   nm={distRound(d.nm, settings.units)}
-                  sub={minutes(d.nm)}
+                  sub={sailTime(d.nm)}
                   stamped={visited.has(d.port.id)}
                 />
               ))}
@@ -405,7 +418,7 @@ export function PlanPanel({ ports, setView, chart, pick, narrow }: Props) {
                 name={extra.port.name}
                 line={placeLine(extra.port)}
                 nm={distRound(extra.nm, settings.units)}
-                sub={extra.watches > 1 ? plural(watchesNeeded(extra.nm, watchMin), 'watch', 'watches') : minutes(extra.nm)}
+                sub={extra.watches > 1 ? plural(watchesNeeded(extra.nm, reach), 'watch', 'watches') : sailTime(extra.nm)}
                 stamped={visited.has(extra.port.id)}
               />
             </section>

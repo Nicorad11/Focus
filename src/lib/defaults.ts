@@ -33,6 +33,7 @@ export const DEFAULT_SITES = ['youtube.com', 'reddit.com', 'x.com', 'instagram.c
 export const DEFAULT_SETTINGS: Settings = {
   units: 'nm',
   watchMin: 60,
+  pace: 'half',
   homePortId: null,
   sound: 'swell',
   volume: 0.6,
