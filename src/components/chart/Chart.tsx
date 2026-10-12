@@ -2,7 +2,8 @@ import { useEffect, useImperativeHandle, useRef, useState, type CSSProperties, t
 import type { GeoJSONSource, LayerSpecification, Map as MlMap, Marker, PaddingOptions, StyleSpecification } from 'maplibre-gl';
 import maplibregl from './maplibre';
 import { highDetailLand, lowDetailLand, regionLand, type BBox } from './landSource';
-import { bounds, type LonLat } from '../../lib/geo';
+import { recordError } from '../../lib/errors';
+import { bounds, normalizeLon, type LonLat } from '../../lib/geo';
 import { loadPorts } from '../../lib/ports';
 import { CompassRose } from './CompassRose';
 
@@ -196,6 +197,17 @@ function makeStyle(c: Colors): StyleSpecification {
 
 const HARBOUR_LAYERS = ['harbours-major', 'harbours-mid', 'harbours-small', 'harbours-tiny'];
 
+/** MapLibre throws on input it can't use; that should cost one chart update, never the app. */
+function guard(what: string, fn: () => void) {
+  try {
+    fn();
+  } catch (e) {
+    recordError(`chart:${what}`, e);
+  }
+}
+
+const finite = (p: LonLat) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && Math.abs(p[1]) <= 90;
+
 function applyColors(map: MlMap, c: Colors) {
   const set = (layer: string, prop: string, value: string) => {
     if (map.getLayer(layer)) map.setPaintProperty(layer, prop, value);
@@ -242,7 +254,8 @@ function graticule(map: MlMap): { fc: GeoJSON.FeatureCollection; step: number } 
   const n = Math.min(85, Math.ceil(b.getNorth() / step) * step);
   const features: GeoJSON.Feature[] = [];
   const count = (e - w) / step + (n - s) / step;
-  if (count > 400) return { fc: EMPTY, step };
+  // a view the map can't describe (zero size, mid-resize) or one too wide to rule: no lines
+  if (![w, e, s, n].every(Number.isFinite) || !(count <= 400)) return { fc: EMPTY, step };
   for (let x = w; x <= e + 1e-9; x += step) {
     features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [[x, s], [x, (s + n) / 2], [x, n]] } });
   }
@@ -255,11 +268,7 @@ function graticule(map: MlMap): { fc: GeoJSON.FeatureCollection; step: number } 
 }
 
 function fmtDeg(v: number, pos: string, neg: string, step: number): string {
-  let x = v;
-  if (pos === 'E') {
-    while (x > 180) x -= 360;
-    while (x < -180) x += 360;
-  }
+  const x = pos === 'E' ? normalizeLon(v) : v;
   const hemi = Math.abs(x) < 1e-9 ? '' : x > 0 ? pos : neg;
   const abs = Math.abs(x);
   let d = Math.floor(abs + 1e-9);
@@ -399,13 +408,16 @@ export function Chart({
         const lats: Edges['lats'] = [];
         const lons: Edges['lons'] = [];
         const step = g.step;
-        for (let y = Math.ceil(b.getSouth() / step) * step; y <= b.getNorth(); y += step) {
-          const pt = map.project([b.getEast(), y]);
-          if (pt.y > 16 && pt.y < height - 28) lats.push({ y: pt.y, text: fmtDeg(y, 'N', 'S', step) });
-        }
-        for (let x = Math.ceil(b.getWest() / step) * step; x <= b.getEast(); x += step) {
-          const pt = map.project([x, b.getSouth()]);
-          if (pt.x > 30 && pt.x < width - 60) lons.push({ x: pt.x, text: fmtDeg(x, 'E', 'W', step) });
+        // the same lines as the graticule; none when it has none
+        if (g.fc.features.length) {
+          for (let y = Math.ceil(b.getSouth() / step) * step; y <= b.getNorth(); y += step) {
+            const pt = map.project([b.getEast(), y]);
+            if (pt.y > 16 && pt.y < height - 28) lats.push({ y: pt.y, text: fmtDeg(y, 'N', 'S', step) });
+          }
+          for (let x = Math.ceil(b.getWest() / step) * step; x <= b.getEast(); x += step) {
+            const pt = map.project([x, b.getSouth()]);
+            if (pt.x > 30 && pt.x < width - 60) lons.push({ x: pt.x, text: fmtDeg(x, 'E', 'W', step) });
+          }
         }
         setEdges({ lats, lons });
         setScale(scaleFor(map));
@@ -427,10 +439,12 @@ export function Chart({
       highDetailLand()
         .then((polys) => {
           if (!mapRef.current) return;
-          const { fill, shore } = regionLand(polys, next);
-          (map.getSource('land-hi') as GeoJSONSource | undefined)?.setData(fill);
-          (map.getSource('shore-hi') as GeoJSONSource | undefined)?.setData(shore);
-          region = next;
+          guard('coastline', () => {
+            const { fill, shore } = regionLand(polys, next);
+            (map.getSource('land-hi') as GeoJSONSource | undefined)?.setData(fill);
+            (map.getSource('shore-hi') as GeoJSONSource | undefined)?.setData(shore);
+            region = next;
+          });
         })
         .catch((e) => console.warn('coastline detail', e))
         .finally(() => {
@@ -439,9 +453,9 @@ export function Chart({
     };
     map.on('load', () => {
       // the theme may have changed while the style was loading
-      applyColors(map, readColors());
+      guard('colours', () => applyColors(map, readColors()));
       setReady(true);
-      onMove();
+      onMoveSafe();
       updateRegion();
       lowDetailLand().then(
         (fc) => {
@@ -451,9 +465,10 @@ export function Chart({
         (e) => setFailed(String(e)),
       );
     });
-    map.on('moveend', onMove);
+    const onMoveSafe = () => guard('move', onMove);
+    map.on('moveend', onMoveSafe);
     map.on('moveend', updateRegion);
-    map.on('resize', onMove);
+    map.on('resize', onMoveSafe);
 
     // harbour dots: hover name, click to choose
     const tip = document.createElement('div');
@@ -486,7 +501,7 @@ export function Chart({
 
     // follow the theme
     const mo = new MutationObserver(() => {
-      if (map.isStyleLoaded()) applyColors(map, readColors());
+      if (map.isStyleLoaded()) guard('colours', () => applyColors(map, readColors()));
     });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
@@ -508,21 +523,24 @@ export function Chart({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
+    const source = () => map.getSource('harbours') as GeoJSONSource | undefined;
     if (!harbours) {
-      (map.getSource('harbours') as GeoJSONSource).setData(EMPTY);
+      guard('harbours', () => source()?.setData(EMPTY));
       return;
     }
     let cancelled = false;
     loadPorts().then((idx) => {
       if (cancelled) return;
-      (map.getSource('harbours') as GeoJSONSource).setData({
-        type: 'FeatureCollection',
-        features: idx.list.map((p) => ({
-          type: 'Feature',
-          properties: { id: p.id, name: p.name, size: p.size },
-          geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
-        })),
-      });
+      guard('harbours', () =>
+        source()?.setData({
+          type: 'FeatureCollection',
+          features: idx.list.map((p) => ({
+            type: 'Feature',
+            properties: { id: p.id, name: p.name, size: p.size },
+            geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
+          })),
+        }),
+      );
     });
     return () => {
       cancelled = true;
@@ -544,12 +562,14 @@ export function Chart({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    (map.getSource('routes') as GeoJSONSource).setData({
-      type: 'FeatureCollection',
-      features: routes
-        .filter((r) => r.coords.length >= 2)
-        .map((r) => ({ type: 'Feature', properties: { id: r.id, style: r.style }, geometry: { type: 'LineString', coordinates: r.coords } })),
-    });
+    guard('routes', () =>
+      (map.getSource('routes') as GeoJSONSource | undefined)?.setData({
+        type: 'FeatureCollection',
+        features: routes
+          .filter((r) => r.coords.length >= 2 && r.coords.every(finite))
+          .map((r) => ({ type: 'Feature', properties: { id: r.id, style: r.style }, geometry: { type: 'LineString', coordinates: r.coords } })),
+      }),
+    );
   }, [ready, routes]);
 
   // labelled ports
@@ -558,6 +578,7 @@ export function Chart({
     if (!map || !ready) return;
     const seen = new Set<string>();
     for (const p of ports) {
+      if (!finite(p.pos)) continue;
       const key = `${p.kind}:${p.id}`;
       seen.add(key);
       const sig = `${p.pos.join(',')}|${p.side ?? ''}|${p.sub ? 1 : 0}`;
@@ -572,8 +593,11 @@ export function Chart({
         continue;
       }
       existing?.marker.remove();
-      const marker = new maplibregl.Marker({ element: markerElement(p, (id) => clickRef.current?.(id)), anchor: 'center' }).setLngLat(p.pos).addTo(map);
-      markers.current.set(key, { marker, sig });
+      markers.current.delete(key);
+      guard('marker', () => {
+        const marker = new maplibregl.Marker({ element: markerElement(p, (id) => clickRef.current?.(id)), anchor: 'center' }).setLngLat(p.pos).addTo(map);
+        markers.current.set(key, { marker, sig });
+      });
     }
     for (const [key, { marker }] of markers.current) {
       if (!seen.has(key)) {
@@ -587,23 +611,26 @@ export function Chart({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    if (!boat) {
+    if (!boat || !finite(boat.pos)) {
       boatMarker.current?.remove();
       boatMarker.current = null;
       return;
     }
-    if (!boatMarker.current) {
-      boatMarker.current = new maplibregl.Marker({ element: boatElement(), anchor: 'center' }).setLngLat(boat.pos).addTo(map);
-    }
-    boatMarker.current.setLngLat(boat.pos);
-    const hull = boatMarker.current.getElement().querySelector('.cm-boat-hull');
-    hull?.setAttribute('transform', `rotate(${boat.course.toFixed(1)})`);
+    guard('boat', () => {
+      if (!boatMarker.current) {
+        boatMarker.current = new maplibregl.Marker({ element: boatElement(), anchor: 'center' }).setLngLat(boat.pos).addTo(map);
+      }
+      boatMarker.current.setLngLat(boat.pos);
+      const hull = boatMarker.current.getElement().querySelector('.cm-boat-hull');
+      hull?.setAttribute('transform', `rotate(${(Number.isFinite(boat.course) ? boat.course : 0).toFixed(1)})`);
+    });
   }, [ready, boat]);
 
   // framing
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready || !fit || fit.points.length === 0) return;
+    const points = fit?.points.filter(finite) ?? [];
+    if (!map || !ready || !fit || points.length === 0) return;
     const padding = { top: 40, right: 40, bottom: 40, left: 40, ...fit.padding };
     const { width, height } = map.getContainer().getBoundingClientRect();
     // keep padding sane on small windows
@@ -616,16 +643,18 @@ export function Chart({
       padding.bottom = Math.max(20, Math.min(padding.bottom, height / 3));
     }
     const duration = fit.animate === false ? 0 : 900;
-    if (fit.points.length === 1) {
-      map.easeTo({ center: fit.points[0], zoom: fit.zoom ?? 7.5, padding, duration });
-    } else {
-      const [sw, ne] = bounds(fit.points);
+    guard('fit', () => {
+      if (points.length === 1) {
+        map.easeTo({ center: points[0], zoom: fit.zoom ?? 7.5, padding, duration });
+        return;
+      }
+      const [sw, ne] = bounds(points);
       try {
         map.fitBounds([sw, ne], { padding, maxZoom: fit.maxZoom ?? 9, duration });
       } catch {
-        map.easeTo({ center: fit.points[0], zoom: 6, duration });
+        map.easeTo({ center: points[0], zoom: 6, duration });
       }
-    }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, fit?.key]);
 

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Rail, TitleBar } from './components/Shell';
 import { Toasts } from './components/Toasts';
 import { AnchorIcon } from './components/icons';
@@ -61,13 +62,23 @@ function MainWindow() {
       <div className="shell-body">
         <Rail route={route} underWay={!!watch} />
         <main className="main">
-          <ChartScreen ports={ports} visible={route === 'chart'} />
-          {route === 'logbook' && <Logbook ports={ports} />}
-          {route === 'ports' && <Voyage ports={ports} />}
-          {route === 'batten' && <BattenDown />}
-          {route === 'settings' && <Settings ports={ports} />}
+          <ErrorBoundary area="chart" resetKey={route} hidden={route !== 'chart'}>
+            <ChartScreen ports={ports} visible={route === 'chart'} />
+          </ErrorBoundary>
+          {route !== 'chart' && (
+            <ErrorBoundary area={route} resetKey={route}>
+              {route === 'logbook' && <Logbook ports={ports} />}
+              {route === 'ports' && <Voyage ports={ports} />}
+              {route === 'batten' && <BattenDown />}
+              {route === 'settings' && <Settings ports={ports} />}
+            </ErrorBoundary>
+          )}
           {!ports && <div className="chart-loading">Loading harbours…</div>}
-          {ports && !onboarded && <Welcome ports={ports} />}
+          {ports && !onboarded && (
+            <ErrorBoundary area="welcome">
+              <Welcome ports={ports} />
+            </ErrorBoundary>
+          )}
           {keeper.idle && watch && (
             <div className="idle-card" role="alertdialog" aria-labelledby="idle-title">
               <AnchorIcon size={22} />

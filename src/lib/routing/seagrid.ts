@@ -428,10 +428,8 @@ export function rawDistance(field: Field, to: LonLat, snapNm = 6): number {
 
 /** Unwrap `lon` onto the branch nearest `ref`, for passages across the antimeridian. */
 export function unwrapNear(lon: number, ref: number): number {
-  let l = lon;
-  while (l - ref > 180) l -= 360;
-  while (ref - l > 180) l += 360;
-  return l;
+  if (!Number.isFinite(lon) || !Number.isFinite(ref)) return lon;
+  return lon + Math.round((ref - lon) / 360) * 360;
 }
 
 /** Choose grid size for a field of radius R nm. */

@@ -58,6 +58,23 @@ fn hide_tray_flyout(app: AppHandle) {
 /// The shield's two buttons: "back" (to the chart) and "open" (hold to open anyway, steady only).
 #[tauri::command]
 fn shield_action(state: State<'_, SharedState>, app: AppHandle, action: String, exe: String) {
+    shield_choice(&state, &app, &action, exe);
+}
+
+/// Ctrl+Alt+L: bring Leeward forward. With the shield up this is its "Back to the chart", so the
+/// keyboard always gets you out from under the shield, whatever it shows.
+fn bring_forward(app: &AppHandle) {
+    let state = app.state::<SharedState>();
+    let shielded = state.lock().unwrap().shield_for.is_some();
+    if shielded {
+        shield_choice(&state, app, "back", String::new());
+    } else {
+        ui::hide_shield(app);
+        ui::focus_main(app, None);
+    }
+}
+
+fn shield_choice(state: &SharedState, app: &AppHandle, action: &str, exe: String) {
     let mut s = state.lock().unwrap();
     let covered = s.shield_for.take();
     let steady = s.config.firmness == "steady";
@@ -66,19 +83,19 @@ fn shield_action(state: State<'_, SharedState>, app: AppHandle, action: String, 
     if action == "open" && steady {
         s.allowed_apps.insert(exe.clone());
         drop(s);
-        ui::hide_shield(&app);
-        ui::emit_blocker_event(&app, "opened-anyway", &name, "app");
+        ui::hide_shield(app);
+        ui::emit_blocker_event(app, "opened-anyway", &name, "app");
         if let Some((_, hwnd)) = covered {
             blocker::bring_forward(hwnd);
         }
     } else {
         drop(s);
-        ui::hide_shield(&app);
+        ui::hide_shield(app);
         if let Some((_, hwnd)) = covered {
             blocker::minimize(hwnd);
         }
-        ui::emit_blocker_event(&app, "held-off", &name, "app");
-        ui::focus_main(&app, Some("chart"));
+        ui::emit_blocker_event(app, "held-off", &name, "app");
+        ui::focus_main(app, Some("chart"));
     }
 }
 
@@ -183,7 +200,7 @@ pub fn run() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
                     if event.state() == ShortcutState::Pressed && shortcut.matches(Modifiers::CONTROL | Modifiers::ALT, Code::KeyL) {
-                        ui::focus_main(app, None);
+                        bring_forward(app);
                     }
                 })
                 .build(),

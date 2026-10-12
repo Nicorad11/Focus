@@ -7,9 +7,28 @@
     <meta name="description" content="Leeward — a focus timer where your boat sails a real passage while you work." />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>Leeward</title>
+    <style>
+      /* until the app draws: see public/boot.js */
+      .boot { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: #13233a; color: #e8edf2; font: 15px/1.5 system-ui, sans-serif; }
+      .boot-stuck { display: grid; gap: 10px; max-width: 420px; text-align: center; justify-items: center; }
+      .boot-stuck[hidden], .boot-wait[hidden] { display: none; }
+      .boot-wait { color: #9fb0c0; }
+      .boot-detail { color: #9fb0c0; font-size: 13px; overflow-wrap: anywhere; }
+      .boot-reload { font: inherit; font-weight: 600; padding: 10px 22px; border: 0; border-radius: 10px; background: #e0442c; color: #fff; cursor: pointer; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot" class="boot" role="status">
+        <span class="boot-wait">Getting under way…</span>
+        <div class="boot-stuck" hidden>
+          <strong>Leeward is taking longer than usual to start.</strong>
+          <span class="boot-detail"></span>
+          <button type="button" class="boot-reload">Reload</button>
+        </div>
+      </div>
+    </div>
+    <script src="./boot.js"></script>
     <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>

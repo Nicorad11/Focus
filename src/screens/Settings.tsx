@@ -5,8 +5,9 @@ import { DownloadIcon, PlusIcon, SearchIcon, UploadIcon } from '../components/ic
 import { toast } from '../components/Toasts';
 import { ambience, SOUNDS } from '../lib/audio';
 import { FLAG_COLORS } from '../lib/defaults';
+import { clearErrors, errorLog, errorReport } from '../lib/errors';
 import { logbookCSV } from '../lib/exporting';
-import { distRound } from '../lib/format';
+import { distRound, plural } from '../lib/format';
 import { platform } from '../lib/platform';
 import { placeLine, searchPorts, type PortIndex } from '../lib/ports';
 import { getState, replaceState, resetState, setState, useStore } from '../lib/store';
@@ -369,8 +370,45 @@ export function Settings({ ports }: { ports: PortIndex | null }) {
             Your boat sails at a cruising yacht’s {BOAT_KNOTS} knots, or twice that at half time. Coastlines from Natural Earth; harbours from Natural Earth and UN/LOCODE. The chart is for planning
             watches, not for navigation.
           </p>
+          <ErrorReport />
         </section>
       </div>
+    </div>
+  );
+}
+
+/** Errors kept on this device, to copy into a bug report. */
+function ErrorReport() {
+  const [count, setCount] = useState(() => errorLog().length);
+  if (!count) return null;
+  return (
+    <div className="row">
+      <span className="row-main">
+        <span className="row-title">Error report</span>
+        <span className="row-sub">Leeward ran into {plural(count, 'problem')} on this device. Copy the details to report it.</span>
+      </span>
+      <button
+        className="btn white small"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(errorReport());
+            toast('Error report copied.');
+          } catch {
+            toast('Couldn’t copy. Your browser blocked the clipboard.');
+          }
+        }}
+      >
+        Copy
+      </button>
+      <button
+        className="btn white small"
+        onClick={() => {
+          clearErrors();
+          setCount(0);
+        }}
+      >
+        Clear
+      </button>
     </div>
   );
 }

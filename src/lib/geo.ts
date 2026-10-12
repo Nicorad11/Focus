@@ -44,8 +44,7 @@ export function interpolate(a: LonLat, b: LonLat, f: number): LonLat {
   let lon = Math.atan2(y, x) * DEG;
   // Keep the longitude on the same "unwrapped" branch as the endpoints.
   const ref = a[0] + (b[0] - a[0]) * f;
-  while (lon - ref > 180) lon -= 360;
-  while (ref - lon > 180) lon += 360;
+  if (Number.isFinite(ref)) lon += Math.round((ref - lon) / 360) * 360;
   return [lon, lat];
 }
 
@@ -140,10 +139,7 @@ function dm(value: number, pos: string, neg: string, degWidth: number): string {
 
 /** "55°41′N 12°39′E" */
 export function formatPosition([lon, lat]: LonLat): string {
-  let l = lon;
-  while (l > 180) l -= 360;
-  while (l < -180) l += 360;
-  return `${dm(lat, 'N', 'S', 2)} ${dm(l, 'E', 'W', 2)}`;
+  return `${dm(lat, 'N', 'S', 2)} ${dm(normalizeLon(lon), 'E', 'W', 2)}`;
 }
 
 /** Compass course with leading zeros: "092°" */
@@ -156,9 +152,9 @@ export function compassPoint(deg: number): string {
   return POINTS[Math.round(((deg % 360) + 360) % 360 / 45) % 8];
 }
 
+/** Longitude in -180…180. Arithmetic, not a loop, so a bad value can never hang the app. */
 export function normalizeLon(lon: number): number {
-  let l = lon;
-  while (l > 180) l -= 360;
-  while (l < -180) l += 360;
-  return l;
+  if (!Number.isFinite(lon)) return 0;
+  if (lon >= -180 && lon <= 180) return lon;
+  return ((((lon + 180) % 360) + 360) % 360) - 180;
 }

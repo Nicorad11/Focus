@@ -14,9 +14,21 @@ import './styles/screens.css';
 import './styles/pages.css';
 import './styles/windows.css';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { recordError, showFatal, watchGlobalErrors } from './lib/errors';
 
-createRoot(document.getElementById('root')!).render(
+watchGlobalErrors();
+
+const container = document.getElementById('root')!;
+createRoot(container, {
+  onUncaughtError(error, info) {
+    recordError('root', error, info.componentStack);
+    window.setTimeout(() => showFatal(container, error instanceof Error ? error.message : String(error)), 0);
+  },
+}).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary area="app" full>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

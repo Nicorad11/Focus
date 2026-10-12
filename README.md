@@ -110,7 +110,8 @@ npm run desktop:build   # installers in src-tauri/target/release/bundle/
   isn't running nothing is blocked. Install it from *Batten → Browser helpers → Install helper*
   (opens the bundled folder; use *Load unpacked*), or from the zip.
 - **Awareness.** Tray icon with minutes left and a flyout (left click), taskbar progress bar,
-  always-on-top mini window, a toast when you make port, `Ctrl+Alt+L` to bring Leeward forward.
+  always-on-top mini window, a toast when you make port, `Ctrl+Alt+L` to bring Leeward forward
+  (with the shield up, it does the same as *Back to the chart*).
 - **Keeps running.** Closing the window keeps the watch going in the tray. Start with Windows is
   optional (starts hidden in the tray). An optional *Still on board?* check asks after a stretch with
   no mouse or keyboard input, and can drop anchor at the moment you left.
@@ -137,6 +138,10 @@ npm run desktop:build   # installers in src-tauri/target/release/bundle/
   1:50m coastline when zoomed out and 1:10m detail clipped to the region in view.
 - **Sound** is generated with the Web Audio API (swell and rigging, rain on deck, wind, ship's bell),
   so there are no recordings to license.
+- **When something breaks**, only the part that failed is replaced by a card with *Try again* and
+  *Reload*; the title bar and rail keep working, and the watch keeps its time. If Leeward can't start
+  at all, the start screen says so and offers a reload. Errors are kept on the device;
+  *Settings → About → Error report* copies them for a bug report.
 - **Data** stays on the device (localStorage; in the desktop app, the WebView2 profile under
   `%LOCALAPPDATA%\com.leeward.desktop`). Settings → *Back up* / *Restore* moves it between computers;
   the logbook exports to CSV.

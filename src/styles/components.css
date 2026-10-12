@@ -496,3 +496,66 @@ textarea.field {
     background-position: -200% 0;
   }
 }
+
+/* a part of the app that crashed (ErrorBoundary) */
+.crash {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--bg);
+  overflow: auto;
+}
+
+.crash.full {
+  position: fixed;
+  background: var(--chrome);
+}
+
+.crash[hidden] {
+  display: none;
+}
+
+.crash-card {
+  width: 480px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 28px;
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 18px;
+  box-shadow: var(--shadow-dialog);
+}
+
+.crash-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.crash-text {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.crash-detail {
+  margin: 0;
+  width: 100%;
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+
+.crash-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
